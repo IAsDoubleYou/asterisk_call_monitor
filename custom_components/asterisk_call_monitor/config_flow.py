@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 import logging
 from typing import Any
 
@@ -50,6 +51,17 @@ CONNECTION_SCHEMA = vol.Schema(
         vol.Required(CONF_PORT, default=DEFAULT_PORT): NumberSelector(
             NumberSelectorConfig(min=1, max=65535, step=1, mode=NumberSelectorMode.BOX)
         ),
+        vol.Required(CONF_USERNAME): TextSelector(),
+        vol.Required(CONF_PASSWORD): TextSelector(
+            TextSelectorConfig(type=TextSelectorType.PASSWORD)
+        ),
+    }
+)
+
+# Reauth only asks for credentials; the host and port of an existing entry
+# stay untouched, matching what actually goes stale (a rotated AMI secret).
+REAUTH_SCHEMA = vol.Schema(
+    {
         vol.Required(CONF_USERNAME): TextSelector(),
         vol.Required(CONF_PASSWORD): TextSelector(
             TextSelectorConfig(type=TextSelectorType.PASSWORD)
@@ -139,6 +151,41 @@ class AsteriskCallMonitorConfigFlow(ConfigFlow, domain=DOMAIN):
             ),
             errors=errors,
             description_placeholders={"error": detail},
+        )
+
+    async def async_step_reauth(
+        self, entry_data: Mapping[str, Any]
+    ) -> ConfigFlowResult:
+        """Start reauth after ConfigEntryAuthFailed; the host/port stay the same."""
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Re-collect the AMI username and password for the existing entry."""
+        errors: dict[str, str] = {}
+        detail = ""
+        entry = self._get_reauth_entry()
+
+        if user_input is not None:
+            connection = {
+                CONF_HOST: entry.data[CONF_HOST],
+                CONF_PORT: entry.data[CONF_PORT],
+                CONF_USERNAME: user_input[CONF_USERNAME],
+                CONF_PASSWORD: user_input[CONF_PASSWORD],
+            }
+            error, detail = await _async_validate_connection(self.hass, connection)
+            if error is None:
+                return self.async_update_reload_and_abort(entry, data=connection)
+            errors["base"] = error
+
+        return self.async_show_form(
+            step_id="reauth_confirm",
+            data_schema=self.add_suggested_values_to_schema(
+                REAUTH_SCHEMA, user_input or {CONF_USERNAME: entry.data[CONF_USERNAME]}
+            ),
+            errors=errors,
+            description_placeholders={"error": detail, "host": entry.data[CONF_HOST]},
         )
 
 

@@ -16,6 +16,18 @@
           "username": "AMI username, as configured in manager.conf.",
           "password": "AMI secret for that user."
         }
+      },
+      "reauth_confirm": {
+        "title": "Reconnect to Asterisk",
+        "description": "The AMI refused the stored credentials for {host}. Enter the current username and password; the connection is tested before it is saved.",
+        "data": {
+          "username": "Username",
+          "password": "Password"
+        },
+        "data_description": {
+          "username": "AMI username, as configured in manager.conf.",
+          "password": "AMI secret for that user."
+        }
       }
     },
     "error": {
@@ -24,7 +36,8 @@
       "unknown": "Unexpected error while connecting: {error}"
     },
     "abort": {
-      "already_configured": "This Asterisk server is already configured."
+      "already_configured": "This Asterisk server is already configured.",
+      "reauth_successful": "Reconnected successfully."
     }
   },
   "options": {
