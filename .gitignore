@@ -1,0 +1,24 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+
+# Unit test / coverage reports
+.coverage
+.cache
+.pytest_cache/
+.ruff_cache/
+coverage.xml
+
+# macOS
+.DS_Store
+
+# Local-only Claude instructions
+CLAUDE.md
+c.sh
+
+# Release archive, built by .github/workflows/release.yaml and attached to
+# the GitHub release; never committed
+homeassistant-asterisk_call_monitor.zip

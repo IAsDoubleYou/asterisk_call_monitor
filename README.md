@@ -1,0 +1,100 @@
+# <img src="https://raw.githubusercontent.com/IAsDoubleYou/asterisk_call_monitor/main/custom_components/asterisk_call_monitor/brand/icon.png" height="48"> Asterisk Call Monitor for Home Assistant
+
+[![HACS Custom][hacs_shield]][hacs]
+[![GitHub Latest Release][releases_shield]][latest_release]
+[![GitHub Downloads (latest Release)][downloads_latest_shield]][latest_release]
+[![GitHub All Releases][downloads_total_shield]][releases]
+[![Tests][tests_shield]][tests]
+
+A Home Assistant custom integration that connects directly to an Asterisk PBX over the **Asterisk Manager Interface (AMI)** and tracks the current incoming and outgoing call, so automations can react to a ringing or dialing phone without a separate script or an MQTT hop in between.
+
+## Why this exists
+
+Detecting "who is calling right now" and "what number are we dialing right now" from Asterisk's AMI event stream is fiddly: the interesting information is spread across several event types (`Newchannel`, `Newexten`, `Dial`, `Hangup`, `BridgeEnter`/`DialAnswer`), and telling a real external call apart from an internal handset, or a rejected call from a busy signal, takes some care. This integration does that classification once, centrally, and exposes the result as three sensors instead of every automation having to reason about raw AMI events (or a hand-rolled script publishing to MQTT) itself.
+
+## Features
+
+* **Incoming call sensor** — the status of the current incoming call (ringing, answered, rejected, busy, not answered, ended) with the caller's number.
+* **Outgoing call sensor** — the same, for the current outgoing call (dialing instead of ringing).
+* **Last call sensor** — whichever of the two changed most recently, with a `direction` attribute, so an automation that only cares about "the last thing that happened" does not need to watch two entities.
+* Push-driven: sensors update the instant an AMI event arrives, no polling.
+* Distinguishes an internal handset from a real external caller/destination, and reports why a call ended (rejected before pickup, busy, not answered, or a normal hangup after being answered) instead of a single generic "ended" status.
+* Reconnects automatically if the AMI connection drops, and clears a call that got stuck (e.g. a missed `Hangup` event) after an hour.
+
+## Installation
+
+### Via [HACS](https://hacs.xyz/)
+
+This integration is not in the HACS default store. Add it as a custom repository:
+
+1. HACS → the **⋮** menu → **Custom repositories**.
+2. Repository: `https://github.com/IAsDoubleYou/asterisk_call_monitor`, category **Integration**.
+3. Install **Asterisk Call Monitor**, then restart Home Assistant.
+
+### Manual
+
+1. Copy `custom_components/asterisk_call_monitor` into your Home Assistant `custom_components` directory.
+2. Restart Home Assistant.
+
+## Configuration
+
+Settings → Devices & Services → **+ Add Integration** → search for **Asterisk Call Monitor**.
+
+| Field | Required | Default | Description |
+|---|---|---|---|
+| Host | yes | | Host name or IP address of the Asterisk server. |
+| Port | no | `5038` | Port the AMI listens on. |
+| Username | yes | | AMI username, as configured in `manager.conf`. |
+| Password | yes | | AMI secret for that user. |
+
+The connection is tested before it is saved. AMI credentials need at least the `system`, `call` and `originate` read privileges to receive the events this integration listens for.
+
+### Options
+
+Available afterwards via **Configure** on the integration card:
+
+| Option | Default | Description |
+|---|---|---|
+| Internal extensions | `100` | Comma separated list of extensions that are internal handsets, not external callers. A ringing channel from one of these is never reported as an incoming call. |
+| Minimum digits for an external number | `5` | An extension dialed without a clearer `Dial` event to name the destination is only treated as an outgoing call once it has at least this many digits. |
+
+## Sensors
+
+Each sensor's state is the current call status; the phone number, when the call started, and (once it has ended) the hangup cause are exposed as attributes.
+
+| Status | Meaning |
+|---|---|
+| `idle` | No active call in this direction right now. |
+| `bellen` | An incoming call is ringing. |
+| `kiezen` | An outgoing call is being dialed. |
+| `beantwoord` | The call was answered. |
+| `afgewezen` | The call was hung up before it was answered. |
+| `bezet` | The destination was busy. |
+| `niet_beantwoord` | The call was not answered in time. |
+| `beeindigd` | The call was answered and then hung up normally. |
+
+The status values are deliberately kept in Dutch (`bellen`, `kiezen`, `beantwoord`, ...) rather than translated, so this integration is a drop-in replacement for an existing setup built around those same words.
+
+## Troubleshooting
+
+* **"Could not reach the Asterisk server"** — check the host, port and that the AMI is reachable from the Home Assistant host (`manager.conf`'s `bindaddr` and `permit`/`deny` rules commonly block this).
+* **"The AMI refused the username or password"** — check the AMI user's credentials and that it has the event privileges mentioned above.
+* An incoming call from an internal handset showing up as a caller, or the reverse — adjust **Internal extensions** / **Minimum digits for an external number** under Configure.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md).
+
+## License
+
+[MIT](LICENSE)
+
+[hacs_shield]: https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=flat-square
+[hacs]: https://github.com/hacs/integration
+[latest_release]: https://github.com/IAsDoubleYou/asterisk_call_monitor/releases/latest
+[releases_shield]: https://img.shields.io/github/v/release/IAsDoubleYou/asterisk_call_monitor?style=flat-square
+[releases]: https://github.com/IAsDoubleYou/asterisk_call_monitor/releases/
+[downloads_total_shield]: https://img.shields.io/github/downloads/IAsDoubleYou/asterisk_call_monitor/total?style=flat-square
+[downloads_latest_shield]: https://img.shields.io/github/downloads/IAsDoubleYou/asterisk_call_monitor/latest/total?style=flat-square
+[tests_shield]: https://img.shields.io/github/actions/workflow/status/IAsDoubleYou/asterisk_call_monitor/tests.yaml?branch=main&label=tests&style=flat-square
+[tests]: https://github.com/IAsDoubleYou/asterisk_call_monitor/actions/workflows/tests.yaml

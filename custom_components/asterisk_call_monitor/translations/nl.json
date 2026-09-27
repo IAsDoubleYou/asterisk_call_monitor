@@ -1,0 +1,46 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Asterisk AMI-verbinding",
+        "description": "Vul de verbindingsgegevens van de Asterisk Manager Interface (AMI) in. De verbinding wordt getest voordat deze wordt opgeslagen.",
+        "data": {
+          "host": "Host",
+          "port": "Poort",
+          "username": "Gebruikersnaam",
+          "password": "Wachtwoord"
+        },
+        "data_description": {
+          "host": "Hostnaam of IP-adres van de Asterisk-server.",
+          "port": "Poort waarop de AMI luistert. Standaard is dat 5038.",
+          "username": "AMI-gebruikersnaam, zoals ingesteld in manager.conf.",
+          "password": "AMI-secret van die gebruiker."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "De Asterisk-server is niet bereikbaar. Controleer de host, de poort en je firewall. Details: {error}",
+      "invalid_auth": "De AMI weigert de gebruikersnaam of het wachtwoord.",
+      "unknown": "Onverwachte fout bij het verbinden: {error}"
+    },
+    "abort": {
+      "already_configured": "Deze Asterisk-server is al ingesteld."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Gespreksclassificatie",
+        "description": "Deze instellingen bepalen wanneer een toestel intern is in plaats van een echte externe beller.",
+        "data": {
+          "excluded_extensions": "Interne toestellen",
+          "min_external_digits": "Minimum aantal cijfers voor een extern nummer"
+        },
+        "data_description": {
+          "excluded_extensions": "Kommagescheiden lijst met toestellen die interne handsets zijn, geen externe bellers. Een rinkelend kanaal van een van deze wordt nooit als inkomend gesprek gemeld.",
+          "min_external_digits": "Een toestel met minstens dit aantal cijfers, gekozen zonder dat een duidelijker Dial-event de bestemming noemt, wordt behandeld als een uitgaand gesprek naar dat nummer."
+        }
+      }
+    }
+  }
+}

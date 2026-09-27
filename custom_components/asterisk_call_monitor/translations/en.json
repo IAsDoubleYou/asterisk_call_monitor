@@ -1,0 +1,46 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Asterisk AMI connection",
+        "description": "Enter the connection details of the Asterisk Manager Interface (AMI). The connection is tested before it is saved.",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "username": "Username",
+          "password": "Password"
+        },
+        "data_description": {
+          "host": "Host name or IP address of the Asterisk server.",
+          "port": "Port the AMI listens on. The default is 5038.",
+          "username": "AMI username, as configured in manager.conf.",
+          "password": "AMI secret for that user."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not reach the Asterisk server. Check the host, the port and your firewall. Details: {error}",
+      "invalid_auth": "The AMI refused the username or password.",
+      "unknown": "Unexpected error while connecting: {error}"
+    },
+    "abort": {
+      "already_configured": "This Asterisk server is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Call classification",
+        "description": "These settings tell an internal handset apart from a real external caller.",
+        "data": {
+          "excluded_extensions": "Internal extensions",
+          "min_external_digits": "Minimum digits for an external number"
+        },
+        "data_description": {
+          "excluded_extensions": "Comma separated list of extensions that are internal handsets, not external callers. A ringing channel from one of these is never reported as an incoming call.",
+          "min_external_digits": "An extension with at least this many digits, dialed without a clearer Dial event to name the destination, is treated as an outgoing call to that number."
+        }
+      }
+    }
+  }
+}
