@@ -5,6 +5,12 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2026-09-27
+
+### Fixed
+
+- A bad AMI login now correctly shows a reauth form to re-enter credentials, instead of crashing with `data_entry_flow.UnknownStep`. Home Assistant automatically starts a reauth flow on `ConfigEntryAuthFailed`, which the config flow did not yet implement; only surfaced once authentication actually failed, so the initial release's tests never hit it.
+
 ## [0.1.0] - 2026-09-27
 
 First release. A full rewrite of a local-only, unpublished predecessor, built to replace a proven external script (a systemd-managed Python service parsing raw AMI events and publishing to MQTT) with a native Home Assistant integration.
