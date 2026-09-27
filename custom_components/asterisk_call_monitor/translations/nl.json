@@ -16,6 +16,18 @@
           "username": "AMI-gebruikersnaam, zoals ingesteld in manager.conf.",
           "password": "AMI-secret van die gebruiker."
         }
+      },
+      "reauth_confirm": {
+        "title": "Opnieuw verbinden met Asterisk",
+        "description": "De AMI weigert de opgeslagen inloggegevens voor {host}. Vul de huidige gebruikersnaam en het wachtwoord in; de verbinding wordt getest voordat deze wordt opgeslagen.",
+        "data": {
+          "username": "Gebruikersnaam",
+          "password": "Wachtwoord"
+        },
+        "data_description": {
+          "username": "AMI-gebruikersnaam, zoals ingesteld in manager.conf.",
+          "password": "AMI-secret van die gebruiker."
+        }
       }
     },
     "error": {
@@ -24,7 +36,8 @@
       "unknown": "Onverwachte fout bij het verbinden: {error}"
     },
     "abort": {
-      "already_configured": "Deze Asterisk-server is al ingesteld."
+      "already_configured": "Deze Asterisk-server is al ingesteld.",
+      "reauth_successful": "Opnieuw verbonden."
     }
   },
   "options": {

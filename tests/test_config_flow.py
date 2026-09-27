@@ -166,3 +166,47 @@ async def test_options_flow_default_values_used_when_unset(
         DEFAULT_EXCLUDED_EXTENSIONS
     )
     assert schema_defaults[CONF_MIN_EXTERNAL_DIGITS] == DEFAULT_MIN_EXTERNAL_DIGITS
+
+
+async def test_reauth_flow_updates_credentials(hass: HomeAssistant, mock_ami) -> None:
+    """A ConfigEntryAuthFailed-triggered reauth updates the stored credentials.
+
+    Regression test: Home Assistant automatically starts a reauth flow when
+    async_setup_entry raises ConfigEntryAuthFailed. Without async_step_reauth
+    on the config flow, that crashes with data_entry_flow.UnknownStep instead
+    of showing a form - this only surfaces when setup actually fails, so the
+    happy-path tests above never exercise it.
+    """
+    entry = make_entry()
+    entry.add_to_hass(hass)
+
+    result = await entry.start_reauth_flow(hass)
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "reauth_confirm"
+
+    mock_ami.side_effect = None
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"username": "newuser", "password": "newsecret"}
+    )
+    await hass.async_block_till_done()
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reauth_successful"
+    assert entry.data["username"] == "newuser"
+    assert entry.data["password"] == "newsecret"
+    assert entry.data["host"] == "pbx.local"  # unchanged
+
+
+async def test_reauth_flow_reports_invalid_auth(hass: HomeAssistant, mock_ami) -> None:
+    """A reauth attempt with still-wrong credentials is reported on the form."""
+    entry = make_entry()
+    entry.add_to_hass(hass)
+    mock_ami.side_effect = AsteriskAuthError("Authentication failed")
+
+    result = await entry.start_reauth_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"username": "hauser", "password": "still-wrong"}
+    )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {"base": "invalid_auth"}
