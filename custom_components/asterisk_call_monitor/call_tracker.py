@@ -117,8 +117,7 @@ class CallTracker:
         app_data = event.get("AppData", "")
 
         if application == "Dial" and app_data and "/" in app_data:
-            self._start_outgoing(channel, _clean_destination(app_data))
-            return True
+            return self._start_outgoing(channel, _clean_destination(app_data))
 
         extension = event.get("Extension", "")
         if extension.isdigit() and len(extension) >= self._min_external_digits:
@@ -131,8 +130,7 @@ class CallTracker:
         extension = self._pending_outgoing.pop(channel, None)
         if extension is None or self.outgoing.channel == channel:
             return False
-        self._start_outgoing(channel, extension)
-        return True
+        return self._start_outgoing(channel, extension)
 
     def handle_dial(self, event: dict) -> bool:
         """Register the outgoing call a Dial event usually names most cleanly."""
@@ -146,10 +144,25 @@ class CallTracker:
         if not destination:
             return False
 
-        self._start_outgoing(channel, _clean_destination(destination))
-        return True
+        return self._start_outgoing(channel, _clean_destination(destination))
 
-    def _start_outgoing(self, channel: str, destination: str) -> None:
+    def _start_outgoing(self, channel: str, destination: str) -> bool:
+        """Start (or refine) the tracked outgoing call, unless one is already active.
+
+        A Dial/Newexten event unrelated to the channel already being tracked
+        is treated as noise rather than a second call: this household never
+        places two outgoing calls at once, but FreePBX's own dialplan can
+        still emit an extra Dial event for an unrelated channel (a macro or
+        Local-channel hop it uses internally), which would otherwise clobber
+        the real destination with something like the dialing extension
+        itself. A hangup-final status (ended/rejected/busy/no_answer) does
+        not count as "already active" here, so a new call can start right
+        after the previous one finished, without waiting for prune_stale.
+        """
+        in_progress = self.outgoing.status in (STATUS_DIALING, STATUS_ANSWERED)
+        if in_progress and not self._channel_related(self.outgoing.channel, channel):
+            return False
+
         self._pending_outgoing.pop(channel, None)
         now = self._now()
         self.outgoing = CallState(
@@ -159,6 +172,7 @@ class CallTracker:
             started_at=now,
             updated_at=now,
         )
+        return True
 
     def handle_answered(self, event: dict) -> tuple[bool, bool]:
         """Mark the matching call answered on a BridgeEnter/DialAnswer event."""
