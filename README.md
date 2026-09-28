@@ -65,6 +65,12 @@ Each sensor's state is the current call status; the phone number, when the call 
 
 Sensors are enum sensors: the state shown in the UI is translated into the frontend's language (English by default, Dutch included), while automations always compare against the stable, untranslated value in the table below regardless of language.
 
+`started_at` and `updated_at` are timezone-aware datetimes (UTC), not epoch numbers, so they display sensibly wherever Home Assistant already knows how to show a timestamp, and work directly with template filters such as `as_local`. For a specific display format, for example on a dashboard card:
+
+```jinja
+{{ as_local(state_attr('sensor.asterisk_..._incoming_call', 'updated_at')).strftime('%d-%m-%Y %H:%M:%S') }}
+```
+
 | Status | Meaning |
 |---|---|
 | `idle` | No active call in this direction right now. |
