@@ -189,6 +189,62 @@ def test_dial_without_any_destination_does_nothing() -> None:
     assert tracker.outgoing.status == STATUS_IDLE
 
 
+def test_unrelated_dial_event_does_not_clobber_an_in_progress_call() -> None:
+    """A Dial event for a different channel never overwrites the real call.
+
+    Regression test: FreePBX's own dialplan can emit an extra Dial event
+    for a channel unrelated to the actual outbound call (a macro or
+    Local-channel hop), which used to silently overwrite the correctly
+    detected destination - even with something like the dialing extension
+    itself, e.g. "sip:100".
+    """
+    tracker = _tracker()
+    tracker.handle_dial(
+        {"Channel": "PJSIP/100-001", "Dialstring": "SIP/trunk/0031612345678"}
+    )
+
+    changed = tracker.handle_dial(
+        {"Channel": "Local/100@from-internal-00000042", "Dialstring": "sip:100"}
+    )
+
+    assert changed is False
+    assert tracker.outgoing.phonenumber == "0031612345678"
+    assert tracker.outgoing.channel == "PJSIP/100-001"
+
+
+def test_related_dial_event_still_refines_the_tracked_call() -> None:
+    """A second Dial event for the SAME channel is a legitimate refinement."""
+    tracker = _tracker()
+    tracker.handle_dial(
+        {"Channel": "PJSIP/100-001", "DestCallerIDNum": "0031612340000"}
+    )
+
+    changed = tracker.handle_dial(
+        {"Channel": "PJSIP/100-001", "Dialstring": "SIP/trunk/0031612345678"}
+    )
+
+    assert changed is True
+    assert tracker.outgoing.phonenumber == "0031612345678"
+
+
+def test_a_new_outgoing_call_can_start_right_after_the_previous_one_ended() -> None:
+    """A finished call does not block a genuinely new one from being tracked."""
+    tracker = _tracker()
+    tracker.handle_dial(
+        {"Channel": "PJSIP/100-001", "Dialstring": "SIP/trunk/0031612345678"}
+    )
+    tracker.handle_hangup(
+        {"Channel": "PJSIP/100-001", "Cause": "16", "Cause-txt": "Normal Clearing"}
+    )
+
+    changed = tracker.handle_dial(
+        {"Channel": "PJSIP/100-002", "Dialstring": "SIP/trunk/0031699999999"}
+    )
+
+    assert changed is True
+    assert tracker.outgoing.phonenumber == "0031699999999"
+
+
 # -- Answered ---------------------------------------------------------------
 
 

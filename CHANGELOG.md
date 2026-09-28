@@ -5,6 +5,12 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2026-09-28
+
+### Fixed
+
+- An outgoing call's number could be replaced by the dialing extension itself (e.g. showing `sip:100` instead of the actual number called), because the household's own equipment can produce a second, unrelated `Dial`/`Newexten` event during the same call (FreePBX's dialplan routinely uses an internal macro or Local-channel hop for outbound routes) - a real regression from simplifying the original script's per-channel tracking down to one outgoing call slot, which lost the isolation that gave it for free. A Dial/Newexten event for a channel unrelated to the outgoing call already being tracked is now ignored while that call is still ringing or answered, instead of overwriting it; a genuinely new call is still tracked immediately once the previous one has ended.
+
 ## [0.4.0] - 2026-09-28
 
 ### Changed
