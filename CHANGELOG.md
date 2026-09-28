@@ -5,6 +5,12 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-09-28
+
+### Changed
+
+- **Breaking:** `started_at` and `updated_at` are now timezone-aware datetimes instead of raw epoch numbers, so they are actually readable wherever Home Assistant displays an attribute and can be used directly with template filters such as `as_local`, without converting them first. A template that used to do arithmetic on these as numbers needs to use `as_local`/`as_timestamp` instead; see the README for an example.
+
 ## [0.3.0] - 2026-09-28
 
 ### Added

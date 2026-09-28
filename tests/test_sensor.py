@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from pytest_homeassistant_custom_component.common import mock_restore_cache
 
 from homeassistant.core import HomeAssistant, State
 from homeassistant.helpers.dispatcher import async_dispatcher_send
+from homeassistant.util import dt as dt_util
 
 from .conftest import make_entry, setup_entry
 from custom_components.asterisk_call_monitor.const import (
@@ -80,7 +83,54 @@ async def test_incoming_sensor_restores_its_last_call_after_a_restart(
     state = hass.states.get(INCOMING_SENSOR)
     assert state.state == STATUS_ANSWERED
     assert state.attributes["phonenumber"] == "0031612345678"
-    assert state.attributes["updated_at"] == 950.0
+    assert state.attributes["updated_at"] == dt_util.utc_from_timestamp(950.0)
+
+
+async def test_started_at_and_updated_at_are_readable_datetimes(
+    hass: HomeAssistant, mock_ami
+) -> None:
+    """The timestamp attributes are datetimes, not raw epoch numbers."""
+    entry = make_entry()
+    await setup_entry(hass, entry)
+    connection = entry.runtime_data
+
+    await _ring(hass, connection, "0031612345678")
+
+    state = hass.states.get(INCOMING_SENSOR)
+    assert isinstance(state.attributes["started_at"], datetime)
+    assert isinstance(state.attributes["updated_at"], datetime)
+
+
+async def test_restore_accepts_an_iso_timestamp_from_a_previous_version(
+    hass: HomeAssistant, mock_ami
+) -> None:
+    """A restored datetime (round-tripped through JSON as an ISO string) still works.
+
+    Regression test: restore-state storage serializes a datetime attribute
+    to an ISO-8601 string, unlike the plain float this integration used to
+    store before started_at/updated_at became datetimes; restoring must
+    parse that string back into a float for the tracker's own arithmetic.
+    """
+    mock_restore_cache(
+        hass,
+        [
+            State(
+                INCOMING_SENSOR,
+                STATUS_ANSWERED,
+                {
+                    "phonenumber": "0031612345678",
+                    "started_at": dt_util.utc_from_timestamp(900.0),
+                    "updated_at": dt_util.utc_from_timestamp(950.0),
+                },
+            )
+        ],
+    )
+    entry = make_entry()
+    await setup_entry(hass, entry)
+
+    state = hass.states.get(INCOMING_SENSOR)
+    assert state.state == STATUS_ANSWERED
+    assert state.attributes["updated_at"] == dt_util.utc_from_timestamp(950.0)
 
 
 async def test_last_call_sensor_restores_its_direction_after_a_restart(
