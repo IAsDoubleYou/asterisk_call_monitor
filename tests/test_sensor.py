@@ -53,6 +53,19 @@ async def test_last_call_is_idle_before_any_call(hass: HomeAssistant, mock_ami) 
     assert state.attributes["direction"] is None
 
 
+async def test_call_sensors_are_translatable_enums(
+    hass: HomeAssistant, mock_ami
+) -> None:
+    """All three sensors expose their status as a translated enum, not raw text."""
+    entry = make_entry()
+    await setup_entry(hass, entry)
+
+    for entity_id in (INCOMING_SENSOR, OUTGOING_SENSOR, LAST_CALL_SENSOR):
+        state = hass.states.get(entity_id)
+        assert state.attributes["device_class"] == "enum"
+        assert state.state in state.attributes["options"]
+
+
 async def test_last_call_follows_an_incoming_call(
     hass: HomeAssistant, mock_ami
 ) -> None:

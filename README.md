@@ -62,18 +62,18 @@ Available afterwards via **Configure** on the integration card:
 
 Each sensor's state is the current call status; the phone number, when the call started, and (once it has ended) the hangup cause are exposed as attributes.
 
+Sensors are enum sensors: the state shown in the UI is translated into the frontend's language (English by default, Dutch included), while automations always compare against the stable, untranslated value in the table below regardless of language.
+
 | Status | Meaning |
 |---|---|
 | `idle` | No active call in this direction right now. |
-| `bellen` | An incoming call is ringing. |
-| `kiezen` | An outgoing call is being dialed. |
-| `beantwoord` | The call was answered. |
-| `afgewezen` | The call was hung up before it was answered. |
-| `bezet` | The destination was busy. |
-| `niet_beantwoord` | The call was not answered in time. |
-| `beeindigd` | The call was answered and then hung up normally. |
-
-The status values are deliberately kept in Dutch (`bellen`, `kiezen`, `beantwoord`, ...) rather than translated, so this integration is a drop-in replacement for an existing setup built around those same words.
+| `ringing` | An incoming call is ringing. |
+| `dialing` | An outgoing call is being dialed. |
+| `answered` | The call was answered. |
+| `rejected` | The call was hung up before it was answered. |
+| `busy` | The destination was busy. |
+| `no_answer` | The call was not answered in time. |
+| `ended` | The call was answered and then hung up normally. |
 
 ## Troubleshooting
 

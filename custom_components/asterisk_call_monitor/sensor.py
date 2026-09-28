@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from homeassistant.components.sensor import SensorEntity
+from typing import ClassVar
+
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
@@ -12,6 +14,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .ami import AmiConnection
 from .call_tracker import CallState
 from .const import (
+    CALL_STATUSES,
     DIRECTION_INCOMING,
     DIRECTION_OUTGOING,
     DOMAIN,
@@ -54,6 +57,9 @@ class AsteriskCallSensor(SensorEntity):
 
     _attr_has_entity_name = True
     _attr_should_poll = False
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_options: ClassVar[list[str]] = list(CALL_STATUSES)
+    _attr_translation_key = "call_status"
 
     def __init__(
         self, entry: ConfigEntry, connection: AmiConnection, direction: str
@@ -118,6 +124,9 @@ class AsteriskLastCallSensor(SensorEntity):
     _attr_has_entity_name = True
     _attr_should_poll = False
     _attr_name = "Last call"
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_options: ClassVar[list[str]] = list(CALL_STATUSES)
+    _attr_translation_key = "call_status"
 
     def __init__(self, entry: ConfigEntry, connection: AmiConnection) -> None:
         """Set up the sensor; it starts idle until the first call event."""

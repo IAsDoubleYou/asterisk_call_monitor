@@ -1,4 +1,20 @@
 {
+  "entity": {
+    "sensor": {
+      "call_status": {
+        "state": {
+          "idle": "Idle",
+          "ringing": "Ringing",
+          "dialing": "Dialing",
+          "answered": "Answered",
+          "rejected": "Rejected",
+          "busy": "Busy",
+          "no_answer": "No answer",
+          "ended": "Ended"
+        }
+      }
+    }
+  },
   "config": {
     "step": {
       "user": {

@@ -1,4 +1,20 @@
 {
+  "entity": {
+    "sensor": {
+      "call_status": {
+        "state": {
+          "idle": "Inactief",
+          "ringing": "Bellen",
+          "dialing": "Kiezen",
+          "answered": "Beantwoord",
+          "rejected": "Afgewezen",
+          "busy": "Bezet",
+          "no_answer": "Niet beantwoord",
+          "ended": "Beëindigd"
+        }
+      }
+    }
+  },
   "config": {
     "step": {
       "user": {
