@@ -34,18 +34,29 @@ RECONNECT_INTERVAL: Final = 30
 # channel whose Hangup was missed; drop it rather than show it forever.
 STUCK_CALL_TIMEOUT: Final = 3600
 
-# Call status values. Kept in Dutch, matching the vocabulary the household's
-# existing automations and the proven production script (phone-monitor.py)
-# already use, so this integration is a drop-in replacement for that script
-# rather than requiring every automation to be rewritten around new words.
+# Call status values. These are the machine-readable state stored on the
+# sensor; the sensor is an enum (see sensor.py's translation_key) so the
+# frontend shows a translated label per the user's language instead of one
+# of these literal strings.
 STATUS_IDLE: Final = "idle"
-STATUS_RINGING: Final = "bellen"
-STATUS_DIALING: Final = "kiezen"
-STATUS_ANSWERED: Final = "beantwoord"
-STATUS_REJECTED: Final = "afgewezen"
-STATUS_BUSY: Final = "bezet"
-STATUS_NO_ANSWER: Final = "niet_beantwoord"
-STATUS_ENDED: Final = "beeindigd"
+STATUS_RINGING: Final = "ringing"
+STATUS_DIALING: Final = "dialing"
+STATUS_ANSWERED: Final = "answered"
+STATUS_REJECTED: Final = "rejected"
+STATUS_BUSY: Final = "busy"
+STATUS_NO_ANSWER: Final = "no_answer"
+STATUS_ENDED: Final = "ended"
+
+CALL_STATUSES: Final = (
+    STATUS_IDLE,
+    STATUS_RINGING,
+    STATUS_DIALING,
+    STATUS_ANSWERED,
+    STATUS_REJECTED,
+    STATUS_BUSY,
+    STATUS_NO_ANSWER,
+    STATUS_ENDED,
+)
 
 # Hangup cause codes (ITU-T Q.850), used to tell a rejected call, a busy
 # signal and an unanswered call apart when a channel is torn down.

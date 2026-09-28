@@ -5,6 +5,12 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-09-28
+
+### Changed
+
+- **Breaking:** the call-status sensors' state values changed from Dutch words (`bellen`, `kiezen`, `beantwoord`, `afgewezen`, `bezet`, `niet_beantwoord`, `beeindigd`) to stable English ones (`ringing`, `dialing`, `answered`, `rejected`, `busy`, `no_answer`, `ended`). The sensors are now enum sensors (`device_class: enum`) with a `translation_key`, so the UI shows a label translated into the user's language (English or Dutch) while automations compare against the untranslated English value regardless of language. Any automation comparing a sensor's state to one of the old Dutch words needs updating.
+
 ## [0.1.1] - 2026-09-27
 
 ### Fixed
