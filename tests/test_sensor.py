@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from homeassistant.core import HomeAssistant
+from pytest_homeassistant_custom_component.common import mock_restore_cache
+
+from homeassistant.core import HomeAssistant, State
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 
 from .conftest import make_entry, setup_entry
@@ -12,6 +14,7 @@ from custom_components.asterisk_call_monitor.const import (
     SIGNAL_CALL_UPDATED,
     STATUS_ANSWERED,
     STATUS_DIALING,
+    STATUS_ENDED,
     STATUS_IDLE,
     STATUS_RINGING,
 )
@@ -51,6 +54,68 @@ async def test_last_call_is_idle_before_any_call(hass: HomeAssistant, mock_ami) 
     state = hass.states.get(LAST_CALL_SENSOR)
     assert state.state == STATUS_IDLE
     assert state.attributes["direction"] is None
+
+
+async def test_incoming_sensor_restores_its_last_call_after_a_restart(
+    hass: HomeAssistant, mock_ami
+) -> None:
+    """A sensor's last known call survives a Home Assistant restart."""
+    mock_restore_cache(
+        hass,
+        [
+            State(
+                INCOMING_SENSOR,
+                STATUS_ANSWERED,
+                {
+                    "phonenumber": "0031612345678",
+                    "started_at": 900.0,
+                    "updated_at": 950.0,
+                },
+            )
+        ],
+    )
+    entry = make_entry()
+    await setup_entry(hass, entry)
+
+    state = hass.states.get(INCOMING_SENSOR)
+    assert state.state == STATUS_ANSWERED
+    assert state.attributes["phonenumber"] == "0031612345678"
+    assert state.attributes["updated_at"] == 950.0
+
+
+async def test_last_call_sensor_restores_its_direction_after_a_restart(
+    hass: HomeAssistant, mock_ami
+) -> None:
+    """The last-call sensor follows the same restored call as the direction sensor."""
+    mock_restore_cache(
+        hass,
+        [
+            State(OUTGOING_SENSOR, STATUS_ENDED, {"phonenumber": "0031611112222"}),
+            State(
+                LAST_CALL_SENSOR,
+                STATUS_ENDED,
+                {"direction": DIRECTION_OUTGOING, "phonenumber": "0031611112222"},
+            ),
+        ],
+    )
+    entry = make_entry()
+    await setup_entry(hass, entry)
+
+    state = hass.states.get(LAST_CALL_SENSOR)
+    assert state.state == STATUS_ENDED
+    assert state.attributes["direction"] == DIRECTION_OUTGOING
+    assert state.attributes["phonenumber"] == "0031611112222"
+
+
+async def test_idle_last_state_is_not_restored(hass: HomeAssistant, mock_ami) -> None:
+    """Restoring an idle sensor is a no-op: there is nothing to bring back."""
+    mock_restore_cache(hass, [State(INCOMING_SENSOR, STATUS_IDLE, {})])
+    entry = make_entry()
+    await setup_entry(hass, entry)
+
+    state = hass.states.get(INCOMING_SENSOR)
+    assert state.state == STATUS_IDLE
+    assert state.attributes["phonenumber"] is None
 
 
 async def test_call_sensors_are_translatable_enums(

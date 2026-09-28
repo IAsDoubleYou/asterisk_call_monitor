@@ -5,6 +5,17 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-09-28
+
+### Added
+
+- The incoming, outgoing and last-call sensors now restore their last known call across a Home Assistant restart, instead of resetting to idle with every attribute `null` until the next real event. Restoring never overrides a call already in progress: it only fills an otherwise idle slot.
+- A new `updated_at` attribute reports when a call's status last changed (ringing → answered → ended, for example), separate from `started_at` (when the call began).
+
+### Fixed
+
+- A call that had been going on for over an hour (e.g. a long answered call) could be incorrectly cleared back to idle by the hour-old-call cleanup, because that cleanup measured time since the call *started* rather than since it last *changed*. It now uses the same `updated_at` moment the new attribute reports, so a call that is still actively changing is never pruned, and one that has really gone quiet for an hour is cleared regardless of how long it ran before that.
+
 ## [0.2.0] - 2026-09-28
 
 ### Changed

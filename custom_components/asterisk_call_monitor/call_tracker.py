@@ -36,6 +36,7 @@ class CallState:
     phonenumber: str | None = None
     channel: str | None = None
     started_at: float | None = None
+    updated_at: float | None = None
     cause: str | None = None
     cause_text: str | None = None
 
@@ -93,11 +94,13 @@ class CallTracker:
         if caller_id in self._excluded_extensions:
             return False
 
+        now = self._now()
         self.incoming = CallState(
             status=STATUS_RINGING,
             phonenumber=caller_id or None,
             channel=event.get("Channel", ""),
-            started_at=self._now(),
+            started_at=now,
+            updated_at=now,
         )
         return True
 
@@ -148,11 +151,13 @@ class CallTracker:
 
     def _start_outgoing(self, channel: str, destination: str) -> None:
         self._pending_outgoing.pop(channel, None)
+        now = self._now()
         self.outgoing = CallState(
             status=STATUS_DIALING,
             phonenumber=destination,
             channel=channel,
-            started_at=self._now(),
+            started_at=now,
+            updated_at=now,
         )
 
     def handle_answered(self, event: dict) -> tuple[bool, bool]:
@@ -167,13 +172,17 @@ class CallTracker:
         if self.incoming.is_active and self._matches(
             self.incoming.channel, channel, unique_id
         ):
-            self.incoming = replace(self.incoming, status=STATUS_ANSWERED)
+            self.incoming = replace(
+                self.incoming, status=STATUS_ANSWERED, updated_at=self._now()
+            )
             incoming_changed = True
 
         if self.outgoing.is_active and self._matches(
             self.outgoing.channel, channel, unique_id, dest_channel
         ):
-            self.outgoing = replace(self.outgoing, status=STATUS_ANSWERED)
+            self.outgoing = replace(
+                self.outgoing, status=STATUS_ANSWERED, updated_at=self._now()
+            )
             outgoing_changed = True
 
         return incoming_changed, outgoing_changed
@@ -211,7 +220,13 @@ class CallTracker:
         setattr(
             self,
             direction,
-            replace(current, status=final_status, cause=cause, cause_text=cause_text),
+            replace(
+                current,
+                status=final_status,
+                cause=cause,
+                cause_text=cause_text,
+                updated_at=self._now(),
+            ),
         )
         return True
 
@@ -255,18 +270,31 @@ class CallTracker:
 
         if (
             self.incoming.is_active
-            and self.incoming.started_at is not None
-            and now - self.incoming.started_at > max_age
+            and self.incoming.updated_at is not None
+            and now - self.incoming.updated_at > max_age
         ):
             self.incoming = _IDLE
             incoming_changed = True
 
         if (
             self.outgoing.is_active
-            and self.outgoing.started_at is not None
-            and now - self.outgoing.started_at > max_age
+            and self.outgoing.updated_at is not None
+            and now - self.outgoing.updated_at > max_age
         ):
             self.outgoing = _IDLE
             outgoing_changed = True
 
         return incoming_changed, outgoing_changed
+
+    def restore(self, direction: str, call_state: CallState) -> None:
+        """Restore a call slot from its state before a Home Assistant restart.
+
+        Only takes effect while the slot is still idle, so a real AMI event
+        that already arrived during startup is never overwritten by stale
+        data. The channel id is dropped: it identified a channel in a
+        previous Asterisk session and could coincidentally collide with a
+        real one now, causing a false match in _matches/_channel_related.
+        """
+        if getattr(self, direction).is_active:
+            return
+        setattr(self, direction, replace(call_state, channel=None))

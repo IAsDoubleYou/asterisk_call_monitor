@@ -19,7 +19,8 @@ Detecting "who is calling right now" and "what number are we dialing right now" 
 * **Last call sensor** — whichever of the two changed most recently, with a `direction` attribute, so an automation that only cares about "the last thing that happened" does not need to watch two entities.
 * Push-driven: sensors update the instant an AMI event arrives, no polling.
 * Distinguishes an internal handset from a real external caller/destination, and reports why a call ended (rejected before pickup, busy, not answered, or a normal hangup after being answered) instead of a single generic "ended" status.
-* Reconnects automatically if the AMI connection drops, and clears a call that got stuck (e.g. a missed `Hangup` event) after an hour.
+* Reconnects automatically if the AMI connection drops, and clears a call that has not changed in an hour (e.g. a missed `Hangup` event).
+* Survives a Home Assistant restart: each sensor restores its last known call so the dashboard is not blank until the next real one, and the shared call tracker never mistakes stale, restored data for one still in progress.
 
 ## Installation
 
@@ -60,7 +61,7 @@ Available afterwards via **Configure** on the integration card:
 
 ## Sensors
 
-Each sensor's state is the current call status; the phone number, when the call started, and (once it has ended) the hangup cause are exposed as attributes.
+Each sensor's state is the current call status; the phone number, when the call started, when it last changed status, and (once it has ended) the hangup cause are exposed as attributes.
 
 Sensors are enum sensors: the state shown in the UI is translated into the frontend's language (English by default, Dutch included), while automations always compare against the stable, untranslated value in the table below regardless of language.
 

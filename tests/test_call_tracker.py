@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from custom_components.asterisk_call_monitor.call_tracker import CallTracker
+from custom_components.asterisk_call_monitor.call_tracker import CallState, CallTracker
 from custom_components.asterisk_call_monitor.const import (
     STATUS_ANSWERED,
     STATUS_BUSY,
@@ -397,3 +397,79 @@ def test_prune_stale_leaves_idle_slots_alone() -> None:
     incoming_changed, outgoing_changed = tracker.prune_stale(3600)
 
     assert (incoming_changed, outgoing_changed) == (False, False)
+
+
+def test_prune_stale_is_based_on_the_last_change_not_the_call_start() -> None:
+    """A call answered recently is not pruned just because it started long ago."""
+    clock = FakeClock()
+    tracker = CallTracker(["100"], 5, now=clock)
+    tracker.handle_newchannel(
+        {
+            "Channel": "PJSIP/trunk-001",
+            "ChannelStateDesc": "Ring",
+            "CallerIDNum": "0031612345678",
+        }
+    )
+
+    clock.advance(3000)
+    tracker.handle_answered({"Channel": "PJSIP/trunk-001"})
+    clock.advance(3000)  # 6000s since ringing started, but 3000s since answered
+    incoming_changed, _ = tracker.prune_stale(3600)
+
+    assert incoming_changed is False
+    assert tracker.incoming.status == STATUS_ANSWERED
+
+
+# -- Restoring after a restart ---------------------------------------------
+
+
+def test_restore_populates_an_idle_slot() -> None:
+    """A call state saved before a restart is adopted while the slot is idle."""
+    tracker = _tracker()
+
+    tracker.restore(
+        "incoming",
+        CallState(
+            status=STATUS_ANSWERED,
+            phonenumber="0031612345678",
+            channel="PJSIP/trunk-001",
+            started_at=900.0,
+            updated_at=950.0,
+        ),
+    )
+
+    assert tracker.incoming.status == STATUS_ANSWERED
+    assert tracker.incoming.phonenumber == "0031612345678"
+    assert tracker.incoming.updated_at == 950.0
+
+
+def test_restore_drops_the_old_channel_id() -> None:
+    """The restored channel id is not reused, so it cannot false-match a new event."""
+    tracker = _tracker()
+
+    tracker.restore(
+        "incoming",
+        CallState(status=STATUS_ENDED, channel="PJSIP/trunk-001"),
+    )
+
+    assert tracker.incoming.channel is None
+
+
+def test_restore_never_overwrites_an_active_call() -> None:
+    """A real event that already arrived is never clobbered by restored data."""
+    tracker = _tracker()
+    tracker.handle_newchannel(
+        {
+            "Channel": "PJSIP/trunk-002",
+            "ChannelStateDesc": "Ring",
+            "CallerIDNum": "0031699999999",
+        }
+    )
+
+    tracker.restore(
+        "incoming",
+        CallState(status=STATUS_ENDED, phonenumber="0031612345678"),
+    )
+
+    assert tracker.incoming.status == STATUS_RINGING
+    assert tracker.incoming.phonenumber == "0031699999999"
