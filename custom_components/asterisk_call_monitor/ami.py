@@ -133,12 +133,15 @@ class AmiConnection:
 
     def _on_newchannel(self, event: object, manager: Manager) -> None:
         del manager
-        if self.tracker.handle_newchannel(dict(event.headers)):
+        headers = dict(event.headers)
+        _LOGGER.debug("Newchannel event: %s", headers)
+        if self.tracker.handle_newchannel(headers):
             self._notify(DIRECTION_INCOMING)
 
     def _on_newexten(self, event: object, manager: Manager) -> None:
         del manager
         headers = dict(event.headers)
+        _LOGGER.debug("Newexten event: %s", headers)
         if self.tracker.handle_newexten(headers):
             self._notify(DIRECTION_OUTGOING)
             return
@@ -148,14 +151,16 @@ class AmiConnection:
 
     def _on_dial(self, event: object, manager: Manager) -> None:
         del manager
-        if self.tracker.handle_dial(dict(event.headers)):
+        headers = dict(event.headers)
+        _LOGGER.debug("Dial event: %s", headers)
+        if self.tracker.handle_dial(headers):
             self._notify(DIRECTION_OUTGOING)
 
     def _on_answered(self, event: object, manager: Manager) -> None:
         del manager
-        incoming_changed, outgoing_changed = self.tracker.handle_answered(
-            dict(event.headers)
-        )
+        headers = dict(event.headers)
+        _LOGGER.debug("Answered event: %s", headers)
+        incoming_changed, outgoing_changed = self.tracker.handle_answered(headers)
         if incoming_changed:
             self._notify(DIRECTION_INCOMING)
         if outgoing_changed:
@@ -163,9 +168,9 @@ class AmiConnection:
 
     def _on_hangup(self, event: object, manager: Manager) -> None:
         del manager
-        incoming_changed, outgoing_changed = self.tracker.handle_hangup(
-            dict(event.headers)
-        )
+        headers = dict(event.headers)
+        _LOGGER.debug("Hangup event: %s", headers)
+        incoming_changed, outgoing_changed = self.tracker.handle_hangup(headers)
         if incoming_changed:
             self._notify(DIRECTION_INCOMING)
         if outgoing_changed:
@@ -186,6 +191,12 @@ class AmiConnection:
 
     def _confirm_pending_outgoing(self, channel: str) -> None:
         if self.tracker.confirm_pending_outgoing(channel):
+            _LOGGER.debug(
+                "Confirmed a pending outgoing call on channel %s (no Dial event "
+                "superseded it within %ss)",
+                channel,
+                _PENDING_OUTGOING_DELAY,
+            )
             self._notify(DIRECTION_OUTGOING)
 
     def _notify(self, direction: str) -> None:

@@ -5,6 +5,12 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.2] - 2026-09-29
+
+### Added
+
+- Debug-level logging of every raw AMI event this integration handles (`Newchannel`, `Newexten`, `Dial`, `Hangup`, `BridgeEnter`/`DialAnswer`, plus a confirmed pending-outgoing match). Enable it under **Settings → System → Logs** or with `logger: logs: custom_components.asterisk_call_monitor: debug`, to see exactly what Asterisk sent while investigating a misclassified call.
+
 ## [0.4.1] - 2026-09-28
 
 ### Fixed
