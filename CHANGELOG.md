@@ -5,6 +5,12 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.3] - 2026-09-29
+
+### Fixed
+
+- An incoming call could pollute the outgoing sensor with the household's own extension as the "destination" (e.g. `phonenumber: 100`, showing as unknown once looked up), because delivering an incoming call to a handset uses a `Dial()` dialplan step (e.g. `AppData: "PJSIP/100,20,tI"`) matching the exact same pattern used to detect a real outbound call starting. A destination that is itself one of the configured **Internal extensions** is no longer accepted as an outgoing call.
+
 ## [0.4.2] - 2026-09-29
 
 ### Added

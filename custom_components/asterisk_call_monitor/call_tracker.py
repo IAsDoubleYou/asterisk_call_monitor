@@ -158,7 +158,17 @@ class CallTracker:
         itself. A hangup-final status (ended/rejected/busy/no_answer) does
         not count as "already active" here, so a new call can start right
         after the previous one finished, without waiting for prune_stale.
+
+        A destination that is itself one of the household's own extensions
+        is rejected outright: it is never a real outgoing call, but a false
+        positive most commonly seen when an *incoming* call's own dialplan
+        rings a handset via a Dial() application step (e.g. "PJSIP/100,20"),
+        which matches the exact same "Application: Dial" pattern this uses
+        to detect a real outbound call.
         """
+        if destination in self._excluded_extensions:
+            return False
+
         in_progress = self.outgoing.status in (STATUS_DIALING, STATUS_ANSWERED)
         if in_progress and not self._channel_related(self.outgoing.channel, channel):
             return False
