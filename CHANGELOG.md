@@ -5,6 +5,12 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.4] - 2026-09-29
+
+### Fixed
+
+- An incoming call could still register a bogus outgoing call, now with the dialed DID as the "destination" (showing as unknown once looked up) rather than the household's own extension - v0.4.3 only closed the case where that destination happened to equal a household extension. Root cause, confirmed against real AMI traces: an incoming call's own dialplan traversal produces `Newexten` steps that look just like the ones used to detect a real outgoing call (one whose `Extension` is the dialed DID, a long digit string; one that rings a handset via `Dial()`), just on a channel that is not one of the household's own extensions (an anonymous or trunk channel). Both `Newexten` and `Dial` based outgoing-call detection now only trust a channel that actually belongs to one of the configured **Internal extensions**.
+
 ## [0.4.3] - 2026-09-29
 
 ### Fixed
