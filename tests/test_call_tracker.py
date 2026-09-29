@@ -189,6 +189,29 @@ def test_dial_without_any_destination_does_nothing() -> None:
     assert tracker.outgoing.status == STATUS_IDLE
 
 
+def test_dial_ringing_a_household_extension_is_not_an_outgoing_call() -> None:
+    """FreePBX ringing extension 100 to deliver an incoming call is not outgoing.
+
+    Regression test: an incoming call's own dialplan can ring a handset via
+    a Dial() application step (e.g. AppData "PJSIP/100,20,tI") to deliver
+    the call - which matches the exact same "Application: Dial" pattern
+    used to detect a real outbound call, and used to register the
+    household's own extension as a bogus outgoing destination.
+    """
+    tracker = _tracker()
+
+    changed = tracker.handle_newexten(
+        {
+            "Channel": "PJSIP/trunk-001",
+            "Application": "Dial",
+            "AppData": "PJSIP/100,20,tI",
+        }
+    )
+
+    assert changed is False
+    assert tracker.outgoing.status == STATUS_IDLE
+
+
 def test_unrelated_dial_event_does_not_clobber_an_in_progress_call() -> None:
     """A Dial event for a different channel never overwrites the real call.
 
@@ -224,6 +247,21 @@ def test_related_dial_event_still_refines_the_tracked_call() -> None:
     )
 
     assert changed is True
+    assert tracker.outgoing.phonenumber == "0031612345678"
+
+
+def test_dial_event_to_a_household_extension_does_not_clobber_a_real_call() -> None:
+    """The same false-positive via handle_dial does not overwrite a real call."""
+    tracker = _tracker()
+    tracker.handle_dial(
+        {"Channel": "PJSIP/100-001", "Dialstring": "SIP/trunk/0031612345678"}
+    )
+
+    changed = tracker.handle_dial(
+        {"Channel": "PJSIP/trunk-002", "Dialstring": "PJSIP/100"}
+    )
+
+    assert changed is False
     assert tracker.outgoing.phonenumber == "0031612345678"
 
 
