@@ -189,6 +189,45 @@ def test_dial_without_any_destination_does_nothing() -> None:
     assert tracker.outgoing.status == STATUS_IDLE
 
 
+def test_newexten_on_a_foreign_channel_is_never_a_pending_outgoing_match() -> None:
+    """An incoming call's own dialplan traversal is never an outgoing call.
+
+    Regression test, found via real AMI traces: an incoming call's own
+    Newexten steps include one whose Extension is the DID that was dialed
+    - a long digit string satisfying the bare-digit fallback just as well
+    as a real outgoing call would, but on a channel that is not one of
+    the household's own extensions (e.g. "PJSIP/anonymous-...", an inbound
+    trunk channel) - it used to get confirmed as a bogus outgoing call
+    once no Dial event on that same channel arrived within the grace
+    window, showing an unrecognized DID as the "destination".
+    """
+    tracker = _tracker()
+
+    changed = tracker.handle_newexten(
+        {"Channel": "PJSIP/anonymous-000000a6", "Extension": "0598322100"}
+    )
+
+    assert changed is False
+    confirmed = tracker.confirm_pending_outgoing("PJSIP/anonymous-000000a6")
+    assert confirmed is False
+    assert tracker.outgoing.status == STATUS_IDLE
+
+
+def test_dial_on_a_foreign_channel_is_never_an_outgoing_call() -> None:
+    """A Dial event is only trusted from a channel this household owns."""
+    tracker = _tracker()
+
+    changed = tracker.handle_dial(
+        {
+            "Channel": "PJSIP/anonymous-000000a6",
+            "Dialstring": "PJSIP/0031611205445@trunk",
+        }
+    )
+
+    assert changed is False
+    assert tracker.outgoing.status == STATUS_IDLE
+
+
 def test_dial_ringing_a_household_extension_is_not_an_outgoing_call() -> None:
     """FreePBX ringing extension 100 to deliver an incoming call is not outgoing.
 
@@ -227,7 +266,7 @@ def test_unrelated_dial_event_does_not_clobber_an_in_progress_call() -> None:
     )
 
     changed = tracker.handle_dial(
-        {"Channel": "Local/100@from-internal-00000042", "Dialstring": "sip:100"}
+        {"Channel": "PJSIP/100-999", "Dialstring": "SIP/trunk/0031698765432"}
     )
 
     assert changed is False

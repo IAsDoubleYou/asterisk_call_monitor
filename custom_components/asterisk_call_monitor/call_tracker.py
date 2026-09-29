@@ -111,8 +111,18 @@ class CallTracker:
         A bare-digit extension only registers a pending match: the caller
         should give a following Dial event a short window to supply a
         cleaner destination via confirm_pending_outgoing.
+
+        Only trusted for a channel that belongs to one of the household's
+        own extensions (see _channel_extension): an incoming call's own
+        dialplan traversal produces Newexten steps too, e.g. one whose
+        Extension is the DID that was dialed - a long digit string that
+        would otherwise satisfy the bare-digit fallback below just as well
+        as a real outgoing call would, and get registered as one.
         """
         channel = event.get("Channel", "")
+        if self._channel_extension(channel) not in self._excluded_extensions:
+            return False
+
         application = event.get("Application", "")
         app_data = event.get("AppData", "")
 
@@ -133,8 +143,15 @@ class CallTracker:
         return self._start_outgoing(channel, extension)
 
     def handle_dial(self, event: dict) -> bool:
-        """Register the outgoing call a Dial event usually names most cleanly."""
+        """Register the outgoing call a Dial event usually names most cleanly.
+
+        Same channel-ownership check as handle_newexten, and for the same
+        reason: a Dial event is not unique to a call this household placed.
+        """
         channel = event.get("Channel", "")
+        if self._channel_extension(channel) not in self._excluded_extensions:
+            return False
+
         destination = (
             event.get("Dialstring")
             or event.get("DestCallerIDNum")
@@ -145,6 +162,19 @@ class CallTracker:
             return False
 
         return self._start_outgoing(channel, _clean_destination(destination))
+
+    @staticmethod
+    def _channel_extension(channel: str) -> str:
+        """Return the extension/peer portion of a channel string.
+
+        "PJSIP/100-000000a4" -> "100". An anonymous or trunk channel (e.g.
+        "PJSIP/anonymous-000000a6", "PJSIP/TG100-000000a5") never matches a
+        real extension, which is exactly the point: only a channel that is
+        actually one of the household's own extensions can be trusted as
+        the source of an outgoing call.
+        """
+        after_slash = channel.rsplit("/", maxsplit=1)[-1] if "/" in channel else channel
+        return after_slash.split("-")[0]
 
     def _start_outgoing(self, channel: str, destination: str) -> bool:
         """Start (or refine) the tracked outgoing call, unless one is already active.

@@ -56,7 +56,7 @@ Available afterwards via **Configure** on the integration card:
 
 | Option | Default | Description |
 |---|---|---|
-| Internal extensions | `100` | Comma separated list of extensions that are internal handsets, not external callers or destinations. A ringing channel from one of these is never reported as an incoming call, and one is never reported as an outgoing call's destination either - which matters because delivering an incoming call to a handset uses the same `Dial()` dialplan step a real outgoing call does. |
+| Internal extensions | `100` | Comma separated list of the household's own handsets. A ringing channel from one of these is never reported as an incoming call, one is never reported as an outgoing call's destination either, and - the other way around - only a dialplan step happening on one of these extensions' own channels is trusted to be the start of an outgoing call in the first place. That last part matters because an incoming call's own dialplan traversal produces the same kind of steps a real outgoing call does (ringing a handset via `Dial()`, or a step whose "Extension" is the dialed DID), just on a channel that never belongs to a real extension. |
 | Minimum digits for an external number | `5` | An extension dialed without a clearer `Dial` event to name the destination is only treated as an outgoing call once it has at least this many digits. |
 
 ## Sensors
