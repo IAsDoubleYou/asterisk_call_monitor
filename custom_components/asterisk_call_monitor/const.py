@@ -30,8 +30,10 @@ DEFAULT_MIN_EXTERNAL_DIGITS: Final = 5
 CONNECT_TIMEOUT: Final = 10
 # How often the connection is checked and, if needed, reconnected.
 RECONNECT_INTERVAL: Final = 30
-# A call that has not changed status in this long is almost certainly a
-# channel whose Hangup was missed; drop it rather than show it forever.
+# A call still ringing/dialing/answered (not yet a final status) that has
+# not changed in this long is almost certainly a channel whose Hangup was
+# missed; drop it. A call that already ended is never dropped by this -
+# see CallTracker.prune_stale.
 STUCK_CALL_TIMEOUT: Final = 3600
 
 # Call status values. These are the machine-readable state stored on the

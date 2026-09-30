@@ -19,7 +19,7 @@ Detecting "who is calling right now" and "what number are we dialing right now" 
 * **Last call sensor** — whichever of the two changed most recently, with a `direction` attribute, so an automation that only cares about "the last thing that happened" does not need to watch two entities.
 * Push-driven: sensors update the instant an AMI event arrives, no polling.
 * Distinguishes an internal handset from a real external caller/destination, and reports why a call ended (rejected before pickup, busy, not answered, or a normal hangup after being answered) instead of a single generic "ended" status.
-* Reconnects automatically if the AMI connection drops, and clears a call that has not changed in an hour (e.g. a missed `Hangup` event).
+* Reconnects automatically if the AMI connection drops, and clears a call that is still ringing/dialing/answered after an hour without changing (e.g. a missed `Hangup` event). A call that already ended keeps showing as the last known call indefinitely, across restarts included, until the next one replaces it.
 * Survives a Home Assistant restart: each sensor restores its last known call so the dashboard is not blank until the next real one, and the shared call tracker never mistakes stale, restored data for one still in progress.
 
 ## Installation

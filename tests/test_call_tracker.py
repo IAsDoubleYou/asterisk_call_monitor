@@ -532,6 +532,54 @@ def test_prune_stale_leaves_idle_slots_alone() -> None:
     assert (incoming_changed, outgoing_changed) == (False, False)
 
 
+def test_prune_stale_never_clears_a_call_that_already_ended() -> None:
+    """A finished call stays showing as the last known call, however old.
+
+    Regression test: pruning used to clear any active-looking slot after
+    max_age, including one that already reached a final status - so the
+    dashboard lost the last caller's number an hour after every call,
+    unlike the retained MQTT topic the production script kept forever.
+    """
+    clock = FakeClock()
+    tracker = CallTracker(["100"], 5, now=clock)
+    tracker.handle_newchannel(
+        {
+            "Channel": "PJSIP/trunk-001",
+            "ChannelStateDesc": "Ring",
+            "CallerIDNum": "0031612345678",
+        }
+    )
+    tracker.handle_hangup(
+        {"Channel": "PJSIP/trunk-001", "Cause": "16", "Cause-txt": "Normal Clearing"}
+    )
+
+    clock.advance(100_000)  # far past any reasonable max_age
+    incoming_changed, _ = tracker.prune_stale(3600)
+
+    assert incoming_changed is False
+    assert tracker.incoming.status == STATUS_REJECTED
+    assert tracker.incoming.phonenumber == "0031612345678"
+
+
+def test_prune_stale_still_clears_a_call_stuck_ringing() -> None:
+    """A call that never reached a final status is still pruned as stuck."""
+    clock = FakeClock()
+    tracker = CallTracker(["100"], 5, now=clock)
+    tracker.handle_newchannel(
+        {
+            "Channel": "PJSIP/trunk-001",
+            "ChannelStateDesc": "Ring",
+            "CallerIDNum": "0031612345678",
+        }
+    )
+
+    clock.advance(3601)
+    incoming_changed, _ = tracker.prune_stale(3600)
+
+    assert incoming_changed is True
+    assert tracker.incoming.status == STATUS_IDLE
+
+
 def test_prune_stale_is_based_on_the_last_change_not_the_call_start() -> None:
     """A call answered recently is not pruned just because it started long ago."""
     clock = FakeClock()
