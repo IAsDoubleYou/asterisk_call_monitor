@@ -48,6 +48,11 @@ class CallState:
 
 _IDLE = CallState()
 
+# A call in one of these statuses has not reached a final outcome yet, so
+# going quiet for too long in one of them - not merely being old - is what
+# marks it as stuck (a missed Hangup event), not just "finished a while ago".
+_IN_PROGRESS_STATUSES = (STATUS_RINGING, STATUS_DIALING, STATUS_ANSWERED)
+
 
 def _clean_destination(raw: str) -> str:
     """Strip a Dial-style channel string down to the bare number.
@@ -317,13 +322,22 @@ class CallTracker:
         )
 
     def prune_stale(self, max_age: float) -> tuple[bool, bool]:
-        """Clear a call slot that has not changed in longer than max_age seconds."""
+        """Clear a call slot that is stuck ringing/dialing/answered for too long.
+
+        Only a call that never reached a final status is pruned here - the
+        household's own equipment can miss a Hangup event, and this is what
+        recovers from that. A call that already ended (ended, rejected, busy
+        or no_answer) is left showing indefinitely as the last known call
+        for that direction, exactly like the retained MQTT topic the
+        production script this integration replaced kept doing: it is not
+        "stuck", there is just nothing newer yet.
+        """
         now = self._now()
         incoming_changed = False
         outgoing_changed = False
 
         if (
-            self.incoming.is_active
+            self.incoming.status in _IN_PROGRESS_STATUSES
             and self.incoming.updated_at is not None
             and now - self.incoming.updated_at > max_age
         ):
@@ -331,7 +345,7 @@ class CallTracker:
             incoming_changed = True
 
         if (
-            self.outgoing.is_active
+            self.outgoing.status in _IN_PROGRESS_STATUSES
             and self.outgoing.updated_at is not None
             and now - self.outgoing.updated_at > max_age
         ):

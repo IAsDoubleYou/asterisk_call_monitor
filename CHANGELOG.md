@@ -5,6 +5,12 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.6] - 2026-09-30
+
+### Changed
+
+- **A finished call no longer disappears from its sensor an hour after it ended.** The hour-old-call cleanup (`prune_stale`) was meant to recover from a missed `Hangup` event, but applied to every call regardless of status - clearing a normally completed call's number back to `idle` an hour after it ended, including across a restart if that much time had passed since. The retained MQTT topic the production script this integration replaced kept showing the last caller indefinitely; this now matches that. Only a call still ringing/dialing/answered (never reached a final status) is cleared after an hour - a genuinely stuck one.
+
 ## [0.4.5] - 2026-09-30
 
 ### Added
