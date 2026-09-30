@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+import logging
 from typing import ClassVar
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
@@ -24,6 +25,8 @@ from .const import (
     SIGNAL_CALL_UPDATED,
     STATUS_IDLE,
 )
+
+_LOGGER = logging.getLogger(__name__)
 
 ATTR_PHONENUMBER = "phonenumber"
 ATTR_STARTED_AT = "started_at"
@@ -124,6 +127,11 @@ class AsteriskCallSensor(SensorEntity, RestoreEntity):
 
     async def _async_restore_last_call(self) -> None:
         last_state = await self.async_get_last_state()
+        _LOGGER.debug(
+            "%s: last recorded state before this restart was %s",
+            self.entity_id,
+            last_state.state if last_state is not None else "<none recorded>",
+        )
         if last_state is None or last_state.state not in CALL_STATUSES:
             return
         if last_state.state == STATUS_IDLE:
@@ -144,6 +152,7 @@ class AsteriskCallSensor(SensorEntity, RestoreEntity):
                 cause_text=attributes.get(ATTR_CAUSE_TEXT),
             ),
         )
+        _LOGGER.debug("%s: restored as %s", self.entity_id, last_state.state)
         self.async_write_ha_state()
 
     @callback
@@ -215,11 +224,17 @@ class AsteriskLastCallSensor(SensorEntity, RestoreEntity):
 
     async def _async_restore_direction(self) -> None:
         last_state = await self.async_get_last_state()
+        _LOGGER.debug(
+            "%s: last recorded state before this restart was %s",
+            self.entity_id,
+            last_state.state if last_state is not None else "<none recorded>",
+        )
         if last_state is None:
             return
         direction = last_state.attributes.get(ATTR_DIRECTION)
         if direction in (DIRECTION_INCOMING, DIRECTION_OUTGOING):
             self._direction = direction
+            _LOGGER.debug("%s: restored direction %s", self.entity_id, direction)
             self.async_write_ha_state()
 
     @callback
