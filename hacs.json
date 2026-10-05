@@ -1,5 +1,6 @@
 {
   "name": "Asterisk Call Monitor",
+  "homeassistant": "2026.3.0",
   "render_readme": true,
   "zip_release": true,
   "filename": "homeassistant-asterisk_call_monitor.zip"
