@@ -22,6 +22,10 @@ Detecting "who is calling right now" and "what number are we dialing right now" 
 * Reconnects automatically if the AMI connection drops, and clears a call that is still ringing/dialing/answered after an hour without changing (e.g. a missed `Hangup` event). A call that already ended keeps showing as the last known call indefinitely, across restarts included, until the next one replaces it.
 * Survives a Home Assistant restart: each sensor restores its last known call so the dashboard is not blank until the next real one, and the shared call tracker never mistakes stale, restored data for one still in progress.
 
+## Requirements
+
+Home Assistant 2026.3.0 or newer (Python 3.14), declared as the minimum in `hacs.json`.
+
 ## Installation
 
 ### Via [HACS](https://hacs.xyz/)
