@@ -16,6 +16,7 @@ from homeassistant.config_entries import (
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.selector import (
+    CountrySelector,
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
@@ -27,6 +28,7 @@ from homeassistant.helpers.selector import (
 from .ami import AmiConnection, AsteriskAuthError, AsteriskConnectionError
 from .call_tracker import CallTracker
 from .const import (
+    CONF_COUNTRY,
     CONF_EXCLUDED_EXTENSIONS,
     CONF_HOST,
     CONF_MIN_EXTERNAL_DIGITS,
@@ -190,7 +192,7 @@ class AsteriskCallMonitorConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class AsteriskCallMonitorOptionsFlow(OptionsFlow):
-    """Manage which extensions are internal and how outgoing numbers are recognized."""
+    """Manage the internal extensions, outgoing number detection and the country."""
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
@@ -202,12 +204,13 @@ class AsteriskCallMonitorOptionsFlow(OptionsFlow):
                 for item in user_input[CONF_EXCLUDED_EXTENSIONS].split(",")
                 if item.strip()
             ]
-            return self.async_create_entry(
-                data={
-                    CONF_EXCLUDED_EXTENSIONS: excluded,
-                    CONF_MIN_EXTERNAL_DIGITS: int(user_input[CONF_MIN_EXTERNAL_DIGITS]),
-                }
-            )
+            data: dict[str, Any] = {
+                CONF_EXCLUDED_EXTENSIONS: excluded,
+                CONF_MIN_EXTERNAL_DIGITS: int(user_input[CONF_MIN_EXTERNAL_DIGITS]),
+            }
+            if user_input.get(CONF_COUNTRY):
+                data[CONF_COUNTRY] = user_input[CONF_COUNTRY]
+            return self.async_create_entry(data=data)
 
         current = self.config_entry.options
         return self.async_show_form(
@@ -232,6 +235,10 @@ class AsteriskCallMonitorOptionsFlow(OptionsFlow):
                             min=1, max=20, step=1, mode=NumberSelectorMode.BOX
                         )
                     ),
+                    vol.Optional(
+                        CONF_COUNTRY,
+                        description={"suggested_value": current.get(CONF_COUNTRY)},
+                    ): CountrySelector(),
                 }
             ),
         )

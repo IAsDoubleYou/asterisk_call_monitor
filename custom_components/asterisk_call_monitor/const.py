@@ -18,6 +18,10 @@ CONF_PASSWORD: Final = "password"
 # through Newexten's fallback path, when no Dial event names it directly.
 CONF_EXCLUDED_EXTENSIONS: Final = "excluded_extensions"
 CONF_MIN_EXTERNAL_DIGITS: Final = "min_external_digits"
+# The country the phone system is in, as an ISO 3166 code. It tells a national
+# number ("0123456789") from an international one; when it is not set, the
+# country of the Home Assistant installation is used.
+CONF_COUNTRY: Final = "country"
 
 DEFAULT_PORT: Final = 5038
 # Matches the extension the production phone-monitor.py script has excluded

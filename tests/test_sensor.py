@@ -12,6 +12,7 @@ from homeassistant.util import dt as dt_util
 
 from .conftest import make_entry, setup_entry
 from custom_components.asterisk_call_monitor.const import (
+    CONF_COUNTRY,
     DIRECTION_INCOMING,
     DIRECTION_OUTGOING,
     SIGNAL_CALL_UPDATED,
@@ -234,3 +235,74 @@ async def test_last_call_keeps_following_the_same_direction_through_its_lifecycl
     state = hass.states.get(LAST_CALL_SENSOR)
     assert state.state == STATUS_ANSWERED
     assert state.attributes["direction"] == DIRECTION_INCOMING
+
+
+async def test_numbers_get_the_same_national_and_international_form(
+    hass: HomeAssistant, mock_ami
+) -> None:
+    """An incoming and an outgoing number end up in one uniform format."""
+    hass.config.country = "NL"
+    entry = make_entry()
+    await setup_entry(hass, entry)
+    connection = entry.runtime_data
+
+    await _ring(hass, connection, "0123456789")
+    await _dial(hass, connection, "0031123456789")
+
+    for sensor in (INCOMING_SENSOR, OUTGOING_SENSOR):
+        attributes = hass.states.get(sensor).attributes
+        assert attributes["phonenumber_national"] == "0123456789"
+        assert attributes["phonenumber_international"] == "+31123456789"
+    # The number as Asterisk reported it is left untouched.
+    assert hass.states.get(INCOMING_SENSOR).attributes["phonenumber"] == "0123456789"
+    assert hass.states.get(OUTGOING_SENSOR).attributes["phonenumber"] == "0031123456789"
+    last_call = hass.states.get(LAST_CALL_SENSOR).attributes
+    assert last_call["phonenumber_national"] == "0123456789"
+
+
+async def test_the_country_option_overrides_the_home_assistant_country(
+    hass: HomeAssistant, mock_ami
+) -> None:
+    """The phone system's country is used instead of the one of Home Assistant."""
+    hass.config.country = "US"
+    entry = make_entry()
+    entry.add_to_hass(hass)
+    hass.config_entries.async_update_entry(entry, options={CONF_COUNTRY: "NL"})
+    await setup_entry(hass, entry)
+
+    await _dial(hass, entry.runtime_data, "0031123456789")
+
+    attributes = hass.states.get(OUTGOING_SENSOR).attributes
+    assert attributes["phonenumber_national"] == "0123456789"
+
+
+async def test_without_a_country_only_an_international_number_is_converted(
+    hass: HomeAssistant, mock_ami
+) -> None:
+    """With no country known, a national number cannot be read, so both stay empty."""
+    hass.config.country = None
+    entry = make_entry()
+    await setup_entry(hass, entry)
+    connection = entry.runtime_data
+
+    await _ring(hass, connection, "0123456789")
+    await _dial(hass, connection, "0031123456789")
+
+    incoming = hass.states.get(INCOMING_SENSOR).attributes
+    assert incoming["phonenumber_national"] is None
+    assert incoming["phonenumber_international"] is None
+    outgoing = hass.states.get(OUTGOING_SENSOR).attributes
+    assert outgoing["phonenumber_national"] is None
+    assert outgoing["phonenumber_international"] == "+31123456789"
+
+
+async def test_idle_sensor_has_no_number_forms(hass: HomeAssistant, mock_ami) -> None:
+    """Without a call, the number and both forms are empty."""
+    hass.config.country = "NL"
+    entry = make_entry()
+    await setup_entry(hass, entry)
+
+    attributes = hass.states.get(INCOMING_SENSOR).attributes
+    assert attributes["phonenumber"] is None
+    assert attributes["phonenumber_national"] is None
+    assert attributes["phonenumber_international"] is None

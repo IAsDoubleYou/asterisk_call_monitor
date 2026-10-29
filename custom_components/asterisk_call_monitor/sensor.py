@@ -19,16 +19,20 @@ from .ami import AmiConnection
 from .call_tracker import CallState
 from .const import (
     CALL_STATUSES,
+    CONF_COUNTRY,
     DIRECTION_INCOMING,
     DIRECTION_OUTGOING,
     DOMAIN,
     SIGNAL_CALL_UPDATED,
     STATUS_IDLE,
 )
+from .phone import normalize
 
 _LOGGER = logging.getLogger(__name__)
 
 ATTR_PHONENUMBER = "phonenumber"
+ATTR_PHONENUMBER_NATIONAL = "phonenumber_national"
+ATTR_PHONENUMBER_INTERNATIONAL = "phonenumber_international"
 ATTR_STARTED_AT = "started_at"
 ATTR_UPDATED_AT = "updated_at"
 ATTR_CAUSE = "cause"
@@ -62,6 +66,18 @@ def _timestamp_from_restored_attr(value: object) -> float | None:
         return float(value)
     parsed = dt_util.parse_datetime(str(value))
     return parsed.timestamp() if parsed is not None else None
+
+
+def _number_attributes(
+    raw: str | None, country: str | None
+) -> dict[str, str | datetime | None]:
+    """Return the number as received, plus its national and international form."""
+    numbers = normalize(raw, country)
+    return {
+        ATTR_PHONENUMBER: raw,
+        ATTR_PHONENUMBER_NATIONAL: numbers.national,
+        ATTR_PHONENUMBER_INTERNATIONAL: numbers.international,
+    }
 
 
 _DIRECTION_NAMES = {
@@ -106,6 +122,7 @@ class AsteriskCallSensor(SensorEntity, RestoreEntity):
         """Set up the sensor for one call direction."""
         self._connection = connection
         self._direction = direction
+        self._configured_country: str | None = entry.options.get(CONF_COUNTRY)
         self._attr_unique_id = f"{entry.entry_id}_{direction}"
         self._attr_name = _DIRECTION_NAMES[direction]
         self._attr_device_info = DeviceInfo(
@@ -166,6 +183,11 @@ class AsteriskCallSensor(SensorEntity, RestoreEntity):
         return getattr(self._connection.tracker, self._direction)
 
     @property
+    def _country(self) -> str | None:
+        """Return the country numbers are read against."""
+        return self._configured_country or self.hass.config.country
+
+    @property
     def native_value(self) -> str:
         """Return the current call status."""
         return self._state.status
@@ -175,7 +197,7 @@ class AsteriskCallSensor(SensorEntity, RestoreEntity):
         """Return the phone number and call metadata."""
         state = self._state
         return {
-            ATTR_PHONENUMBER: state.phonenumber,
+            **_number_attributes(state.phonenumber, self._country),
             ATTR_STARTED_AT: _as_attr_timestamp(state.started_at),
             ATTR_UPDATED_AT: _as_attr_timestamp(state.updated_at),
             ATTR_CAUSE: state.cause,
@@ -204,6 +226,7 @@ class AsteriskLastCallSensor(SensorEntity, RestoreEntity):
         """Set up the sensor; it starts idle until the first call event."""
         self._connection = connection
         self._direction: str | None = None
+        self._configured_country: str | None = entry.options.get(CONF_COUNTRY)
         self._attr_unique_id = f"{entry.entry_id}_last_call"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry.entry_id)},
@@ -250,6 +273,11 @@ class AsteriskLastCallSensor(SensorEntity, RestoreEntity):
         return getattr(self._connection.tracker, self._direction)
 
     @property
+    def _country(self) -> str | None:
+        """Return the country numbers are read against."""
+        return self._configured_country or self.hass.config.country
+
+    @property
     def native_value(self) -> str:
         """Return the current status of the last call, or idle before any."""
         state = self._state
@@ -263,7 +291,9 @@ class AsteriskLastCallSensor(SensorEntity, RestoreEntity):
         updated_at = state.updated_at if state is not None else None
         return {
             ATTR_DIRECTION: self._direction,
-            ATTR_PHONENUMBER: state.phonenumber if state is not None else None,
+            **_number_attributes(
+                state.phonenumber if state is not None else None, self._country
+            ),
             ATTR_STARTED_AT: _as_attr_timestamp(started_at),
             ATTR_UPDATED_AT: _as_attr_timestamp(updated_at),
             ATTR_CAUSE: state.cause if state is not None else None,
