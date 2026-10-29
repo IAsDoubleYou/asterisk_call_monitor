@@ -63,11 +63,13 @@
         "description": "These settings tell an internal handset apart from a real external caller.",
         "data": {
           "excluded_extensions": "Internal extensions",
-          "min_external_digits": "Minimum digits for an external number"
+          "min_external_digits": "Minimum digits for an external number",
+          "country": "Country of the phone system"
         },
         "data_description": {
           "excluded_extensions": "Comma separated list of extensions that are internal handsets, not external callers. A ringing channel from one of these is never reported as an incoming call.",
-          "min_external_digits": "An extension with at least this many digits, dialed without a clearer Dial event to name the destination, is treated as an outgoing call to that number."
+          "min_external_digits": "An extension with at least this many digits, dialed without a clearer Dial event to name the destination, is treated as an outgoing call to that number.",
+          "country": "Country the phone numbers belong to, used to tell a national number from an international one and to show every number in both forms. Leave empty to use the country set in Home Assistant."
         }
       }
     }

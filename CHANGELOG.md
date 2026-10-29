@@ -5,6 +5,14 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-10-29
+
+### Added
+
+- **Uniform phone number attributes.** Every call sensor now also has `phonenumber_national` (digits only, for example `0123456789`) and `phonenumber_international` (E.164, for example `+31123456789`), calculated from `phonenumber`. FreePBX returns an incoming caller as it received it (usually national) but an outgoing destination as the dialplan sends it to the trunk (usually international, `0031123456789`), which depends on the dialplan; looking a number up therefore only worked for one of the two directions. `phonenumber` itself is unchanged.
+- **Country of the phone system** option (Configure), used to read the numbers. It falls back to the country set in Home Assistant. Without a country only an already international number gets its international form; a national number cannot be read, so both attributes stay empty. A number from another country than the phone system's has no national form, and anything that is not a plausible phone number (an internal extension, a short code, `anonymous`) leaves both attributes empty.
+- Requirement: `phonenumbers` (parsing and formatting), installed by Home Assistant.
+
 ## [0.5.0] - 2026-10-05
 
 ### Changed

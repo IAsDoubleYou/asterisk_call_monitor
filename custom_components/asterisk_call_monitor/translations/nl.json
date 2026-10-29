@@ -63,11 +63,13 @@
         "description": "Deze instellingen bepalen wanneer een toestel intern is in plaats van een echte externe beller.",
         "data": {
           "excluded_extensions": "Interne toestellen",
-          "min_external_digits": "Minimum aantal cijfers voor een extern nummer"
+          "min_external_digits": "Minimum aantal cijfers voor een extern nummer",
+          "country": "Land van de telefooncentrale"
         },
         "data_description": {
           "excluded_extensions": "Kommagescheiden lijst met toestellen die interne handsets zijn, geen externe bellers. Een rinkelend kanaal van een van deze wordt nooit als inkomend gesprek gemeld.",
-          "min_external_digits": "Een toestel met minstens dit aantal cijfers, gekozen zonder dat een duidelijker Dial-event de bestemming noemt, wordt behandeld als een uitgaand gesprek naar dat nummer."
+          "min_external_digits": "Een toestel met minstens dit aantal cijfers, gekozen zonder dat een duidelijker Dial-event de bestemming noemt, wordt behandeld als een uitgaand gesprek naar dat nummer.",
+          "country": "Land waar de telefoonnummers bij horen. Hiermee wordt een nationaal nummer van een internationaal nummer onderscheiden en wordt elk nummer in beide vormen getoond. Laat leeg om het land uit Home Assistant te gebruiken."
         }
       }
     }

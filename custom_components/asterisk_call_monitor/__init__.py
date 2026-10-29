@@ -12,11 +12,13 @@ from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from .ami import AmiConnection, AsteriskAuthError, AsteriskConnectionError
 from .call_tracker import CallTracker
 from .const import (
+    CONF_COUNTRY,
     CONF_EXCLUDED_EXTENSIONS,
     CONF_MIN_EXTERNAL_DIGITS,
     DEFAULT_EXCLUDED_EXTENSIONS,
     DEFAULT_MIN_EXTERNAL_DIGITS,
 )
+from .phone import warm_up
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -39,6 +41,12 @@ async def async_setup_entry(
         ),
     )
     connection = AmiConnection(hass, dict(entry.data), tracker)
+
+    # Reading the metadata of a country is blocking I/O the first time it is
+    # needed, which would otherwise happen on the event loop at the first call.
+    await hass.async_add_executor_job(
+        warm_up, options.get(CONF_COUNTRY) or hass.config.country
+    )
 
     try:
         await connection.async_connect()

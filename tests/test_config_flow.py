@@ -12,6 +12,7 @@ from custom_components.asterisk_call_monitor.ami import (
     AsteriskConnectionError,
 )
 from custom_components.asterisk_call_monitor.const import (
+    CONF_COUNTRY,
     CONF_EXCLUDED_EXTENSIONS,
     CONF_MIN_EXTERNAL_DIGITS,
     DEFAULT_EXCLUDED_EXTENSIONS,
@@ -148,6 +149,27 @@ async def test_options_flow_updates_settings(hass: HomeAssistant, mock_ami) -> N
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert entry.options[CONF_EXCLUDED_EXTENSIONS] == ["100", "101"]
     assert entry.options[CONF_MIN_EXTERNAL_DIGITS] == 6
+
+
+async def test_options_flow_stores_and_clears_the_country(
+    hass: HomeAssistant, mock_ami
+) -> None:
+    """The country is stored when given and dropped again when left empty."""
+    entry = make_entry()
+    await setup_entry(hass, entry)
+    settings = {CONF_EXCLUDED_EXTENSIONS: "100", CONF_MIN_EXTERNAL_DIGITS: 5}
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    await hass.config_entries.options.async_configure(
+        result["flow_id"], {**settings, CONF_COUNTRY: "NL"}
+    )
+    await hass.async_block_till_done()
+    assert entry.options[CONF_COUNTRY] == "NL"
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    await hass.config_entries.options.async_configure(result["flow_id"], settings)
+    await hass.async_block_till_done()
+    assert CONF_COUNTRY not in entry.options
 
 
 async def test_options_flow_default_values_used_when_unset(

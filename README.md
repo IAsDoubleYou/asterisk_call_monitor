@@ -62,10 +62,11 @@ Available afterwards via **Configure** on the integration card:
 |---|---|---|
 | Internal extensions | `100` | Comma separated list of the household's own handsets. A ringing channel from one of these is never reported as an incoming call, one is never reported as an outgoing call's destination either, and - the other way around - only a dialplan step happening on one of these extensions' own channels is trusted to be the start of an outgoing call in the first place. That last part matters because an incoming call's own dialplan traversal produces the same kind of steps a real outgoing call does (ringing a handset via `Dial()`, or a step whose "Extension" is the dialed DID), just on a channel that never belongs to a real extension. |
 | Minimum digits for an external number | `5` | An extension dialed without a clearer `Dial` event to name the destination is only treated as an outgoing call once it has at least this many digits. |
+| Country of the phone system | Home Assistant's country | The country the phone numbers belong to, used to tell a national number from an international one (see [Phone number formats](#phone-number-formats)). Leave empty to use the country set in Home Assistant. |
 
 ## Sensors
 
-Each sensor's state is the current call status; the phone number, when the call started, when it last changed status, and (once it has ended) the hangup cause are exposed as attributes.
+Each sensor's state is the current call status; the phone number (as received and in a uniform national and international form), when the call started, when it last changed status, and (once it has ended) the hangup cause are exposed as attributes.
 
 Sensors are enum sensors: the state shown in the UI is translated into the frontend's language (English by default, Dutch included), while automations always compare against the stable, untranslated value in the table below regardless of language.
 
@@ -86,10 +87,26 @@ Sensors are enum sensors: the state shown in the UI is translated into the front
 | `no_answer` | The call was not answered in time. |
 | `ended` | The call was answered and then hung up normally. |
 
+## Phone number formats
+
+The `phonenumber` attribute holds the number exactly as Asterisk reports it, and that is not uniform. FreePBX hands over an incoming caller as it received it from the provider, usually in national notation (`0123456789`), but it returns the destination of an outgoing call as the dialplan sends it to the trunk, usually in international notation (`0031123456789`). That depends on the outbound routes of your dialplan and can differ per dialplan, so the integration cannot rely on either one. Looking a number up in a contact list or a database then only works for one of the two directions.
+
+To get a uniform format, every sensor also has these attributes, calculated from `phonenumber`:
+
+| Attribute | Example | Description |
+|---|---|---|
+| `phonenumber_national` | `0123456789` | Digits only, including the national trunk prefix. |
+| `phonenumber_international` | `+31123456789` | The international [E.164](https://en.wikipedia.org/wiki/E.164) notation. |
+
+Both attributes read the number against the country of the phone system: the **Country of the phone system** option, or the country set in Home Assistant when that is empty. Without a country, a number in international notation (`+` or `00`) still gets its `phonenumber_international`, but a national number cannot be read, so both attributes stay empty. `phonenumber_national` is also empty for a number from another country than the phone system's, because its national notation would be meaningless next to local numbers. Anything that is not a plausible phone number, such as an internal extension, a short code like `112` or `anonymous`, leaves both attributes empty; `phonenumber` itself is never changed.
+
+Phone number parsing uses the [phonenumbers](https://pypi.org/project/phonenumbers/) library, which Home Assistant installs for you.
+
 ## Troubleshooting
 
 * **"Could not reach the Asterisk server"** — check the host, port and that the AMI is reachable from the Home Assistant host (`manager.conf`'s `bindaddr` and `permit`/`deny` rules commonly block this).
 * **"The AMI refused the username or password"** — check the AMI user's credentials and that it has the event privileges mentioned above.
+* **`phonenumber_national` or `phonenumber_international` is empty** — check the country under Configure (or in Home Assistant's general settings); a national number cannot be read without one. See [Phone number formats](#phone-number-formats).
 * An incoming call from an internal handset showing up as a caller, or the reverse — adjust **Internal extensions** / **Minimum digits for an external number** under Configure.
 
 ## Changelog
