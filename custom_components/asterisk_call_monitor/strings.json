@@ -44,6 +44,22 @@
           "username": "AMI username, as configured in manager.conf.",
           "password": "AMI secret for that user."
         }
+      },
+      "reconfigure": {
+        "title": "Change the Asterisk connection",
+        "description": "Change the connection details of the Asterisk Manager Interface (AMI), for example after the server moved to a new address. The new connection is tested before it is saved. Leave the password empty to keep the current one.",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "username": "Username",
+          "password": "Password"
+        },
+        "data_description": {
+          "host": "Host name or IP address of the Asterisk server.",
+          "port": "Port the AMI listens on. The default is 5038.",
+          "username": "AMI username, as configured in manager.conf.",
+          "password": "AMI secret for that user. Leave empty to keep the current one."
+        }
       }
     },
     "error": {
@@ -53,7 +69,8 @@
     },
     "abort": {
       "already_configured": "This Asterisk server is already configured.",
-      "reauth_successful": "Reconnected successfully."
+      "reauth_successful": "Reconnected successfully.",
+      "reconfigure_successful": "The connection was updated."
     }
   },
   "options": {

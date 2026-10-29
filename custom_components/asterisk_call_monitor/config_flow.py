@@ -60,6 +60,21 @@ CONNECTION_SCHEMA = vol.Schema(
     }
 )
 
+# Reconfigure asks for the whole connection. The password may stay empty to keep
+# the stored one, so changing the address does not mean typing the secret again.
+RECONFIGURE_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_HOST): TextSelector(),
+        vol.Required(CONF_PORT, default=DEFAULT_PORT): NumberSelector(
+            NumberSelectorConfig(min=1, max=65535, step=1, mode=NumberSelectorMode.BOX)
+        ),
+        vol.Required(CONF_USERNAME): TextSelector(),
+        vol.Optional(CONF_PASSWORD): TextSelector(
+            TextSelectorConfig(type=TextSelectorType.PASSWORD)
+        ),
+    }
+)
+
 # Reauth only asks for credentials; the host and port of an existing entry
 # stay untouched, matching what actually goes stale (a rotated AMI secret).
 REAUTH_SCHEMA = vol.Schema(
@@ -70,6 +85,16 @@ REAUTH_SCHEMA = vol.Schema(
         ),
     }
 )
+
+
+def _connection_id(connection: Mapping[str, Any]) -> str:
+    """Return the identity of a connection: the server and port it points at."""
+    return f"{connection[CONF_HOST]}:{connection[CONF_PORT]}"
+
+
+def _entry_title(connection: Mapping[str, Any]) -> str:
+    """Return the generated title of an entry for a connection."""
+    return f"Asterisk @ {connection[CONF_HOST]}"
 
 
 def _error_detail(err: Exception) -> str:
@@ -133,15 +158,13 @@ class AsteriskCallMonitorConfigFlow(ConfigFlow, domain=DOMAIN):
                 CONF_PASSWORD: user_input[CONF_PASSWORD],
             }
 
-            await self.async_set_unique_id(
-                f"{connection[CONF_HOST]}:{connection[CONF_PORT]}"
-            )
+            await self.async_set_unique_id(_connection_id(connection))
             self._abort_if_unique_id_configured()
 
             error, detail = await _async_validate_connection(self.hass, connection)
             if error is None:
                 return self.async_create_entry(
-                    title=f"Asterisk @ {connection[CONF_HOST]}",
+                    title=_entry_title(connection),
                     data=connection,
                 )
             errors["base"] = error
@@ -150,6 +173,60 @@ class AsteriskCallMonitorConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=self.add_suggested_values_to_schema(
                 CONNECTION_SCHEMA, user_input or {}
+            ),
+            errors=errors,
+            description_placeholders={"error": detail},
+        )
+
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Change where and how the connection is made.
+
+        The new settings are tried before they are saved. The identity of the
+        entry follows a changed host or port, but never onto another
+        connection that already exists.
+        """
+        entry = self._get_reconfigure_entry()
+        errors: dict[str, str] = {}
+        detail = ""
+
+        if user_input is not None:
+            connection = {
+                CONF_HOST: user_input[CONF_HOST].strip(),
+                CONF_PORT: int(user_input[CONF_PORT]),
+                CONF_USERNAME: user_input[CONF_USERNAME],
+                CONF_PASSWORD: user_input.get(CONF_PASSWORD)
+                or entry.data[CONF_PASSWORD],
+            }
+            error, detail = await _async_validate_connection(self.hass, connection)
+            if error is None:
+                changes: dict[str, Any] = {}
+                new_unique_id = _connection_id(connection)
+                if new_unique_id != entry.unique_id:
+                    other = self.hass.config_entries.async_entry_for_domain_unique_id(
+                        DOMAIN, new_unique_id
+                    )
+                    if other is not None and other.entry_id != entry.entry_id:
+                        return self.async_abort(reason="already_configured")
+                    changes["unique_id"] = new_unique_id
+                # A title the user picked stays; the generated one follows.
+                if entry.title == _entry_title(entry.data):
+                    changes["title"] = _entry_title(connection)
+                return self.async_update_reload_and_abort(
+                    entry, data=connection, **changes
+                )
+            errors["base"] = error
+
+        suggested = {
+            key: value
+            for key, value in (user_input or entry.data).items()
+            if key != CONF_PASSWORD
+        }
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=self.add_suggested_values_to_schema(
+                RECONFIGURE_SCHEMA, suggested
             ),
             errors=errors,
             description_placeholders={"error": detail},
