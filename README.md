@@ -54,6 +54,10 @@ Settings → Devices & Services → **+ Add Integration** → search for **Aster
 
 The connection is tested before it is saved. AMI credentials need at least the `system`, `call` and `originate` read privileges to receive the events this integration listens for.
 
+### Changing the connection
+
+When the Asterisk server moves to another address, or its AMI credentials change, use **Reconfigure** in the menu of the integration entry (the three dots). The same fields are shown, filled in with the current values; leave the password empty to keep the current one. The new connection is tested before it is saved, and the entry is reloaded afterwards, so the sensors, their history and your dashboards stay as they are. If the AMI refuses the stored credentials by itself, Home Assistant asks for a new username and password instead.
+
 ### Options
 
 Available afterwards via **Configure** on the integration card:

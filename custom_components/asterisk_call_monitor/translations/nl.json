@@ -44,6 +44,22 @@
           "username": "AMI-gebruikersnaam, zoals ingesteld in manager.conf.",
           "password": "AMI-secret van die gebruiker."
         }
+      },
+      "reconfigure": {
+        "title": "Asterisk-verbinding wijzigen",
+        "description": "Wijzig de verbindingsgegevens van de Asterisk Manager Interface (AMI), bijvoorbeeld nadat de server naar een nieuw adres is verhuisd. De nieuwe verbinding wordt getest voordat hij wordt opgeslagen. Laat het wachtwoord leeg om het huidige te behouden.",
+        "data": {
+          "host": "Host",
+          "port": "Poort",
+          "username": "Gebruikersnaam",
+          "password": "Wachtwoord"
+        },
+        "data_description": {
+          "host": "Hostnaam of IP-adres van de Asterisk-server.",
+          "port": "Poort waarop de AMI luistert. Standaard is 5038.",
+          "username": "AMI-gebruikersnaam, zoals ingesteld in manager.conf.",
+          "password": "AMI-secret van die gebruiker. Laat leeg om het huidige te behouden."
+        }
       }
     },
     "error": {
@@ -53,7 +69,8 @@
     },
     "abort": {
       "already_configured": "Deze Asterisk-server is al ingesteld.",
-      "reauth_successful": "Opnieuw verbonden."
+      "reauth_successful": "Opnieuw verbonden.",
+      "reconfigure_successful": "De verbinding is bijgewerkt."
     }
   },
   "options": {

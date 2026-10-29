@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import pytest
+from pytest_homeassistant_custom_component.common import MockConfigEntry
+
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
@@ -188,6 +191,150 @@ async def test_options_flow_default_values_used_when_unset(
         DEFAULT_EXCLUDED_EXTENSIONS
     )
     assert schema_defaults[CONF_MIN_EXTERNAL_DIGITS] == DEFAULT_MIN_EXTERNAL_DIGITS
+
+
+NEW_CONNECTION = {
+    "host": "freepbx.vm",
+    "port": 5039,
+    "username": "newuser",
+    "password": "newsecret",
+}
+
+
+async def _start_reconfigure(hass: HomeAssistant, entry) -> dict:
+    """Open the reconfigure form of an entry and check it is the right one."""
+    result = await entry.start_reconfigure_flow(hass)
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "reconfigure"
+    return result
+
+
+async def test_reconfigure_flow_moves_the_connection(
+    hass: HomeAssistant, mock_ami
+) -> None:
+    """A new address is tested, saved, and the entry follows it."""
+    entry = make_entry()
+    await setup_entry(hass, entry)
+    entity_ids = {state.entity_id for state in hass.states.async_all("sensor")}
+    result = await _start_reconfigure(hass, entry)
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], NEW_CONNECTION
+    )
+    await hass.async_block_till_done()
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reconfigure_successful"
+    assert dict(entry.data) == NEW_CONNECTION
+    assert entry.unique_id == "freepbx.vm:5039"
+    assert entry.title == "Asterisk @ freepbx.vm"
+    assert entry.runtime_data._host == "freepbx.vm"
+    # The sensors are the same ones: their history and dashboards stay.
+    assert {state.entity_id for state in hass.states.async_all("sensor")} == entity_ids
+
+
+async def test_reconfigure_form_shows_the_stored_values_but_not_the_password(
+    hass: HomeAssistant, mock_ami
+) -> None:
+    """The form is filled in with the current connection, without its secret."""
+    entry = make_entry()
+    await setup_entry(hass, entry)
+
+    result = await _start_reconfigure(hass, entry)
+
+    suggested = {
+        field.schema: field.description.get("suggested_value")
+        for field in result["data_schema"].schema
+        if field.description
+    }
+    assert suggested["host"] == "pbx.local"
+    assert suggested["username"] == "hauser"
+    assert "password" not in suggested
+
+
+async def test_reconfigure_flow_keeps_the_password_when_left_empty(
+    hass: HomeAssistant, mock_ami
+) -> None:
+    """Moving to a new address does not mean typing the secret again."""
+    entry = make_entry()
+    await setup_entry(hass, entry)
+    result = await _start_reconfigure(hass, entry)
+
+    new_address = {k: v for k, v in NEW_CONNECTION.items() if k != "password"}
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], new_address
+    )
+    await hass.async_block_till_done()
+
+    assert result["reason"] == "reconfigure_successful"
+    assert entry.data["password"] == "secret"
+    assert entry.data["host"] == "freepbx.vm"
+
+
+async def test_reconfigure_flow_keeps_a_title_the_user_chose(
+    hass: HomeAssistant, mock_ami
+) -> None:
+    """Only the generated title follows the new address."""
+    entry = make_entry()
+    await setup_entry(hass, entry)
+    hass.config_entries.async_update_entry(entry, title="Home phone")
+    result = await _start_reconfigure(hass, entry)
+
+    await hass.config_entries.flow.async_configure(result["flow_id"], NEW_CONNECTION)
+    await hass.async_block_till_done()
+
+    assert entry.title == "Home phone"
+
+
+@pytest.mark.parametrize(
+    ("error", "key"),
+    [
+        (AsteriskConnectionError("no route"), "cannot_connect"),
+        (AsteriskAuthError("Authentication failed"), "invalid_auth"),
+        (RuntimeError("boom"), "unknown"),
+    ],
+)
+async def test_reconfigure_flow_reports_a_failing_connection(
+    hass: HomeAssistant, mock_ami, error: Exception, key: str
+) -> None:
+    """A connection that fails is shown on the form and nothing is saved."""
+    entry = make_entry()
+    await setup_entry(hass, entry)
+    result = await _start_reconfigure(hass, entry)
+
+    mock_ami.side_effect = error
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], NEW_CONNECTION
+    )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {"base": key}
+    assert dict(entry.data) == CONNECTION
+    assert entry.unique_id == UNIQUE_ID
+
+
+async def test_reconfigure_flow_refuses_an_existing_connection(
+    hass: HomeAssistant, mock_ami
+) -> None:
+    """An entry cannot be moved onto a server another entry already uses."""
+    entry = make_entry()
+    await setup_entry(hass, entry)
+    other = MockConfigEntry(
+        domain=DOMAIN,
+        title="Asterisk @ freepbx.vm",
+        data=NEW_CONNECTION,
+        unique_id="freepbx.vm:5039",
+    )
+    other.add_to_hass(hass)
+    result = await _start_reconfigure(hass, entry)
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], NEW_CONNECTION
+    )
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "already_configured"
+    assert dict(entry.data) == CONNECTION
 
 
 async def test_reauth_flow_updates_credentials(hass: HomeAssistant, mock_ami) -> None:
