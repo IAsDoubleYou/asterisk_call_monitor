@@ -28,7 +28,15 @@ Home Assistant 2026.3.0 or newer (Python 3.14), declared as the minimum in `hacs
 
 ## Installation
 
-### Via [HACS](https://hacs.xyz/)
+### Via the Marketplace (recommended, Home Assistant 2026.11 and newer)
+
+Since Home Assistant 2026.11, HACS is built in as the Marketplace under **Settings > Marketplace**. This integration is not in its catalog yet, so add it from its link:
+
+1. **Settings > Marketplace** → **Add from link** (upper-right corner).
+2. GitHub link: `https://github.com/IAsDoubleYou/asterisk_call_monitor`, then select **Add**. The Marketplace asks you to connect GitHub first if you have not done so yet.
+3. Open **Asterisk Call Monitor** and select **Install**: you land straight in the setup, no restart needed.
+
+### Via [HACS](https://hacs.xyz/) (Home Assistant 2026.10 and older)
 
 This integration is not in the HACS default store. Add it as a custom repository:
 
