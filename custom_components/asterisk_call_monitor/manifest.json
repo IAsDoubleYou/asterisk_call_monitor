@@ -1,6 +1,7 @@
 {
     "domain": "asterisk_call_monitor",
     "name": "Asterisk Call Monitor",
+    "categories": ["messaging_notifications.email_sms_calls"],
     "codeowners": ["@IAsDoubleYou"],
     "config_flow": true,
     "dependencies": [],
