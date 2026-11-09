@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pytest_homeassistant_custom_component.common import mock_restore_cache
+from pytest_homeassistant.common import mock_restore_cache
 
 from homeassistant.core import HomeAssistant, State
 from homeassistant.helpers.dispatcher import async_dispatcher_send

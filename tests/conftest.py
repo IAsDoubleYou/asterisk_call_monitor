@@ -7,7 +7,7 @@ from typing import Any
 from unittest.mock import patch
 
 import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from homeassistant.core import HomeAssistant
 
@@ -18,8 +18,6 @@ from custom_components.asterisk_call_monitor.const import (
     CONF_USERNAME,
     DOMAIN,
 )
-
-pytest_plugins = "pytest_homeassistant_custom_component"
 
 CONNECTION = {
     CONF_HOST: "pbx.local",
@@ -46,11 +44,6 @@ async def setup_entry(hass: HomeAssistant, entry: MockConfigEntry) -> None:
     entry.add_to_hass(hass)
     await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
-
-
-@pytest.fixture(autouse=True)
-def auto_enable_custom_integrations(enable_custom_integrations: None) -> None:
-    """Enable loading of the custom integration in every test."""
 
 
 @pytest.fixture
